@@ -1,0 +1,170 @@
+------------------------------------------------
+Model Viewer for DirectX Tool Kit for DirectX 12
+------------------------------------------------
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+September x, 2016
+
+The DirectX Tool Kit Model Viewer is an interactive test application for
+validating .SDKMESH and .VBO files rendered using the DirectX Tool Kit.
+
+This code is designed to build with Visual Studio 2015. It is recommended that you
+make use of VS 2015 Update 3, Windows Tools 1.4.1, and the
+Windows 10 Anniversary Update SDK (14393).
+
+All content and source code for this package are subject to the terms of the MIT License.
+<http://opensource.org/licenses/MIT>.
+
+For the latest version of the Model Viewer for DirectX Tool Kit, bug reports and feature requests, 
+please visit the GitHub project.
+
+http://aka.ms/directxtk12modelviewer
+
+This project has adopted the Microsoft Open Source Code of Conduct. For more information see the
+Code of Conduct FAQ or contact opencode@microsoft.com with any additional questions or comments.
+
+https://opensource.microsoft.com/codeofconduct/
+
+
+------------------
+BUILD INSTRUCTIONS
+------------------
+
+***PC***
+
+Run VS 2015
+
+Open Project/Solution... "DirectXTKModelViewer_Desktop_2015_Win10.sln"
+
+Ensure "DirectXTKModelViewer_Desktop_2015_Win10" is the "StartUp Project"
+
+Build and Run (F5)
+
+
+***Xbox One***
+
+Open "Xbox One XDK Command Prompt"
+
+cd to DirectXTK\Src\Shaders
+
+run "CompileShaders.cmd xbox"
+
+Run VS 2015
+
+Open Project/Solution... "DirectXTKModelViewer_XDK_2015.sln"
+
+Ensure "DirectXTKModelViewer_XDK_2015" is the "StartUp Project"
+
+Build and Run (F5) or use Deploy Solution
+
+
+------------------
+USAGE
+------------------
+
+***PC***
+
+If a Xbox 360 or Xbox One gamepad controller is plugged into the PC it can be used to
+control the viewer (see below for details). If you press the "View" button, a Open File
+Dialog is used to select the model (.SDKMESH, .CMO, or .VBO) to load.
+
+If no controller is plugged in, you can use keyboard & mouse controls. If you press the "O" key,
+a Open File Dialog is used to select the model (.SDKMESH, .CMO, or .VBO) to load.
+
+MOUSE:
+
+   Press and hold LEFT mouse button to rotate view (SHIFT+LEFT button rotates object instead)
+
+   Press and hold RIGHT mouse button to translate view in XY (SHIFT+RIGHT translates in Z)
+
+   Scroll wheel controls zoom (i.e. distance between camera and focus point)
+
+KEYBOARD:
+
+   W/S and PageUp/PageDown translates in Z
+   A/D and Left/Right translates in X
+   Up/Down translates in Y
+   Q/E rotate left/right
+
+   B toggles culling mode
+   C cycles background color
+   G toggles the grid display
+   H toggles HUD display
+   J toggles the cross display
+   R toggles wireframe
+
+   [/] scales the FOV
+   +/- scales the grid size
+
+   O loads model          
+
+   Home key resets camera to default position
+
+   End key resets model to default rotation
+
+***Xbox One***
+
+For Xbox One, only the gamepad controls are available. When you presse the "View" button, the tool enumerates
+the .SDKMESH, .CMO, and .VBO files in the root of the D:\ drive and allows you to select one of them to load.
+
+GAMEPAD:
+
+    A - Change modes Orbit vs. FPS
+    B - Toggles wireframe/culling mode
+    X - Cycles grid, viewpoint cross, and HUD display
+    Y - Cycle background color
+
+    DPAD
+        U – Translate Up
+        D – Translate Down
+        R – Translate Right
+        L – Translate Left
+
+    Right Trigger - Increment FOV
+    Left Trigger – Decrement FOV
+
+    Right Bumper – Increment translate sensitivity
+    Left Bumper – Decrement translate sensitivity
+
+    Left Thumbstick button - Frame scene extents
+
+    Orbit
+        Right Thumbstick
+              R – Orbit Right
+              L – Orbit Left
+              U – Orbit Up
+              D – Orbit Down
+              Click – Reset View to Default
+
+        Left Thumbstick
+              R – Rotate (Roll) Right
+              L – Rotate (Roll) Left
+              U – Move towards view point
+              D – Move away from view point
+
+    FPS
+        Right Thumbstick
+              R – Rotate Right
+              L – Rotate Left
+              U – Rotate Up
+              D – Rotate Down
+
+        Left Thumbstick
+              R – Translate Right
+              L – Translate Left
+              U – Translate Forward
+              D – Translate Back
+
+NOTE: For Xbox One, after you start up the viewer app, you can use the Xbox One XDK command prompt to copy data files to
+the system:
+
+    xbcp /x/title <source directory> xd:\
+
+
+---------------
+RELEASE HISTORY
+---------------
+
+September x, 2016
+    Initial version
