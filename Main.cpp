@@ -359,7 +359,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ofn.lpstrFile = szFile;
             ofn.lpstrFile[0] = 0;
             ofn.nMaxFile = MAX_PATH;
-            ofn.lpstrFilter = L"DirectX SDK Mesh (SDKMESH)\0*.sdkmesh\0Visual Studio Mesh (CMO)\0*.cmo\0Vertex Buffer Object (VBO)\0*.vbo\0All Files\0*.*\0";
+            ofn.lpstrFilter = L"DirectX SDK Mesh (SDKMESH)\0*.sdkmesh\0Vertex Buffer Object (VBO)\0*.vbo\0All Files\0*.*\0";
             ofn.nFilterIndex = s_filterIndex;
             ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
             if (GetOpenFileName(&ofn))

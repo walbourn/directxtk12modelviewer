@@ -853,6 +853,7 @@ void Game::LoadModel()
     WCHAR fname[_MAX_FNAME];
     _wsplitpath_s(m_szModelName, drive, _MAX_DRIVE, path, MAX_PATH, fname, _MAX_FNAME, ext, _MAX_EXT);
 
+    bool isvbo = false;
     try
     {
         if (_wcsicmp(ext, L".sdkmesh") == 0)
@@ -861,6 +862,7 @@ void Game::LoadModel()
         }
         else if (_wcsicmp(ext, L".vbo") == 0)
         {
+            isvbo = true;
             m_model = Model::CreateFromVBO(m_szModelName);
         }
         else
@@ -918,6 +920,32 @@ void Game::LoadModel()
 
             RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), m_deviceResources->GetDepthBufferFormat());
 
+            if (isvbo)
+            {
+                EffectPipelineStateDescription pd(
+                    &VertexPositionNormalTexture::InputLayout,
+                    CommonStates::Opaque,
+                    CommonStates::DepthDefault,
+                    CommonStates::CullClockwise,
+                    rtState);
+
+                auto effect = std::make_shared<BasicEffect>(device, EffectFlags::Lighting, pd);
+                effect->EnableDefaultLighting();
+                m_modelClockwise.push_back(effect);
+
+                pd.rasterizerDesc = CommonStates::CullCounterClockwise;
+
+                effect = std::make_shared<BasicEffect>(device, EffectFlags::Lighting, pd);
+                effect->EnableDefaultLighting();
+                m_modelCounterClockwise.push_back(effect);
+
+                pd.rasterizerDesc = CommonStates::Wireframe;
+
+                effect = std::make_shared<BasicEffect>(device, EffectFlags::Lighting, pd);
+                effect->EnableDefaultLighting();
+                m_modelWireframe.push_back(effect);
+            }
+            else
             {
                 EffectPipelineStateDescription pd(
                     nullptr,
@@ -934,41 +962,15 @@ void Game::LoadModel()
                     rtState);
 
                 m_modelClockwise = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
-            }
 
-            {
-                EffectPipelineStateDescription pd(
-                    nullptr,
-                    CommonStates::Opaque,
-                    CommonStates::DepthDefault,
-                    CommonStates::CullCounterClockwise,
-                    rtState);
-
-                EffectPipelineStateDescription pdAlpha(
-                    nullptr,
-                    CommonStates::AlphaBlend,
-                    CommonStates::DepthDefault,
-                    CommonStates::CullCounterClockwise,
-                    rtState);
+                pd.rasterizerDesc = CommonStates::CullCounterClockwise;
+                pdAlpha.rasterizerDesc = CommonStates::CullCounterClockwise;
 
                 m_modelCounterClockwise = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
-            }
 
-            {
-                EffectPipelineStateDescription pd(
-                    nullptr,
-                    CommonStates::Opaque,
-                    CommonStates::DepthDefault,
-                    CommonStates::Wireframe,
-                    rtState);
-
-                EffectPipelineStateDescription pdAlpha(
-                    nullptr,
-                    CommonStates::AlphaBlend,
-                    CommonStates::DepthDefault,
-                    CommonStates::Wireframe,
-                    rtState);
-
+                pd.rasterizerDesc = CommonStates::Wireframe;
+                pdAlpha.rasterizerDesc = CommonStates::Wireframe;
+                
                 m_modelWireframe = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
             }
 
@@ -1202,7 +1204,7 @@ void Game::EnumerateModelFiles()
 
     WIN32_FIND_DATA ffdata = { 0 };
 
-    static const WCHAR* exts[] = { L"D:\\*.sdkmesh", L"D:\\*.cmo", L"D:\\*.vbo" };
+    static const WCHAR* exts[] = { L"D:\\*.sdkmesh", L"D:\\*.vbo" };
 
     for (size_t j = 0; j < _countof(exts); ++j)
     {
