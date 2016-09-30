@@ -4,7 +4,7 @@ Model Viewer for DirectX Tool Kit for DirectX 12
 
 Copyright (c) Microsoft Corporation. All rights reserved.
 
-September x, 2016
+September 30, 2016
 
 The DirectX Tool Kit Model Viewer is an interactive test application for
 validating .SDKMESH and .VBO files rendered using the DirectX Tool Kit.
@@ -67,10 +67,10 @@ USAGE
 
 If a Xbox 360 or Xbox One gamepad controller is plugged into the PC it can be used to
 control the viewer (see below for details). If you press the "View" button, a Open File
-Dialog is used to select the model (.SDKMESH, .CMO, or .VBO) to load.
+Dialog is used to select the model (.SDKMESH or .VBO) to load.
 
 If no controller is plugged in, you can use keyboard & mouse controls. If you press the "O" key,
-a Open File Dialog is used to select the model (.SDKMESH, .CMO, or .VBO) to load.
+a Open File Dialog is used to select the model (.SDKMESH or .VBO) to load.
 
 MOUSE:
 
@@ -106,7 +106,7 @@ KEYBOARD:
 ***Xbox One***
 
 For Xbox One, only the gamepad controls are available. When you presse the "View" button, the tool enumerates
-the .SDKMESH, .CMO, and .VBO files in the root of the D:\ drive and allows you to select one of them to load.
+the .SDKMESH and .VBO files in the root of the D:\ drive and allows you to select one of them to load.
 
 GAMEPAD:
 
@@ -166,5 +166,5 @@ the system:
 RELEASE HISTORY
 ---------------
 
-September x, 2016
-    Initial version
+September 30, 2016
+    Initial version using the September 15, 2016 release of the DirectX Tool Kit
