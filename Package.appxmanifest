@@ -8,7 +8,7 @@
             Version="1.0.0.0" />
   
   <Properties>
-    <DisplayName>DirectXTK12ModelViewer</DisplayName>
+    <DisplayName>DirectXTKModelViewer (DirectX 12)</DisplayName>
     <PublisherDisplayName>Xbox Advanced Technology Group</PublisherDisplayName>
     <Logo>StoreLogo.png</Logo>
     <Description>DirectXTK12ModelViewer</Description>
@@ -28,7 +28,7 @@
         Executable="$targetnametoken$.exe" 
         EntryPoint="DirectXTK12ModelViewer.App">
         <VisualElements 
-            DisplayName="DirectXTK12ModelViewer"
+            DisplayName="DirectXTKModelViewer (DirectX 12)"
             Logo="Logo.png"
             SmallLogo="SmallLogo.png"
             Description="DirectXTK12ModelViewer"
