@@ -50,6 +50,11 @@ namespace DX
             return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
         }
 
+        static void DebugRender4K(bool enable)
+        {
+            s_render4K = enable;
+        }
+
     private:
         void MoveToNextFrame();
 
@@ -89,5 +94,8 @@ namespace DX
         IUnknown*                                           m_window;
         D3D_FEATURE_LEVEL                                   m_d3dFeatureLevel;
         RECT                                                m_outputSize;
+
+        // Options.
+        static bool s_render4K;
     };
 }

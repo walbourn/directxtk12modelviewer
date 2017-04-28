@@ -9,6 +9,8 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
+bool DX::DeviceResources::s_render4K = false;
+
 // Constructor for DeviceResources.
 DX::DeviceResources::DeviceResources(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat, UINT backBufferCount) :
     m_backBufferIndex(0),
@@ -60,9 +62,15 @@ void DX::DeviceResources::CreateDeviceResources()
 #endif
 
     // Create the DX12 API device object.
-    DX::ThrowIfFailed(D3D12CreateDevice(
+    D3D12XBOX_CREATE_DEVICE_PARAMETERS params = {};
+    params.Version = D3D12_SDK_VERSION;
+    params.GraphicsCommandQueueRingSizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
+    params.GraphicsScratchMemorySizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
+    params.ComputeScratchMemorySizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
+
+    DX::ThrowIfFailed(D3D12XboxCreateDevice(
         nullptr,
-        m_d3dFeatureLevel,
+        &params,
         IID_GRAPHICS_PPV_ARGS(m_d3dDevice.ReleaseAndGetAddressOf())
         ));
 
@@ -110,6 +118,29 @@ void DX::DeviceResources::CreateDeviceResources()
     {
         throw std::exception("CreateEvent");
     }
+
+#if _XDK_VER >= 0x38390868 /* XDK Edition 161000 */
+    if (s_render4K)
+    {
+        D3D12XBOX_GPU_HARDWARE_CONFIGURATION hwConfig = {};
+        m_d3dDevice->GetGpuHardwareConfigurationX(&hwConfig);
+        if (hwConfig.HardwareVersion >= D3D12XBOX_HARDWARE_VERSION_XBOX_ONE_S)
+        {
+            m_outputSize = { 0, 0, 3840, 2160 };
+        }
+#ifdef _DEBUG
+        else
+        {
+            OutputDebugStringA("INFO: 4K UHD output requires Xbox One S or later; using 1080p\n");
+        }
+#endif
+    }
+#elif defined(_DEBUG)
+    if (s_render4K)
+    {
+        OutputDebugStringA("WARNING: 4K UHD detection not supported prior to October 2016 XDK; using 1080p\n");
+    }
+#endif
 }
 
 // These resources need to be recreated every time the window size is changed.
