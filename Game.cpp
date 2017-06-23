@@ -5,8 +5,6 @@
 #include "pch.h"
 #include "Game.h"
 
-#define GAMMA_CORRECT_RENDERING
-
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
@@ -14,13 +12,8 @@ using Microsoft::WRL::ComPtr;
 
 namespace
 {
-#ifdef GAMMA_CORRECT_RENDERING
     const XMVECTORF32 c_Gray = { 0.215861f, 0.215861f, 0.215861f, 1.f };
     const XMVECTORF32 c_CornflowerBlue = { 0.127438f, 0.300544f, 0.846873f, 1.f };
-#else
-    const XMVECTORF32 c_Gray = Colors::Gray;
-    const XMVECTORF32 c_CornflowerBlue = Colors::CornflowerBlue;
-#endif
 }
 
 Game::Game() :
@@ -40,18 +33,17 @@ Game::Game() :
     m_reloadModel(false),
     m_lhcoords(true),
     m_fpscamera(false),
+    m_toneMapMode(ToneMapPostProcess::Saturate),
     m_selectFile(0),
     m_firstFile(0)
 {
-#ifdef GAMMA_CORRECT_RENDERING
-    m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB);
-#else
-    m_deviceResources = std::make_unique<DX::DeviceResources>();
-#endif
+    m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM);
 
 #if !defined(_XBOX_ONE) || !defined(_TITLE)
     m_deviceResources->RegisterDeviceNotify(this);
 #endif
+
+    m_hdrScene = std::make_unique<DX::RenderTexture>(DXGI_FORMAT_R16G16B16A16_FLOAT);
 
     m_clearColor = Colors::Black.v;
     m_uiColor = Colors::Yellow;
@@ -253,6 +245,11 @@ void Game::Update(DX::StepTimer const& timer)
 #endif
             }
 
+            if (m_gamepadButtonTracker.menu == GamePad::ButtonStateTracker::PRESSED)
+            {
+                CycleToneMapOperator();
+            }
+
             if (m_gamepadButtonTracker.b == GamePad::ButtonStateTracker::PRESSED)
             {
                 int value = ((int)m_ccw << 1) | ((int)m_wireframe);
@@ -403,6 +400,9 @@ void Game::Update(DX::StepTimer const& timer)
         if (m_keyboardTracker.pressed.C)
             CycleBackgroundColor();
 
+        if (m_keyboardTracker.pressed.T)
+            CycleToneMapOperator();
+
         if (m_keyboardTracker.pressed.O)
         {
             PostMessage(m_deviceResources->GetWindowHandle(), WM_USER, 0, 0);
@@ -508,9 +508,12 @@ void Game::Render()
 
     // Prepare the command list to render a new frame.
     m_deviceResources->Prepare();
-    Clear();
 
     auto commandList = m_deviceResources->GetCommandList();
+    m_hdrScene->BeginScene(commandList);
+
+    Clear();
+
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() };
@@ -604,20 +607,28 @@ void Game::Render()
 
                 Vector3 up = Vector3::TransformNormal(Vector3::Up, m_view);
 
-                WCHAR szCamera[256] = { 0 };
+                wchar_t szCamera[256] = { 0 };
                 swprintf_s(szCamera, L"Camera: (%8.4f,%8.4f,%8.4f) Look At: (%8.4f,%8.4f,%8.4f) Up: (%8.4f,%8.4f,%8.4f) FOV: %8.4f",
                     m_lastCameraPos.x, m_lastCameraPos.y, m_lastCameraPos.z,
                     m_cameraFocus.x, m_cameraFocus.y, m_cameraFocus.z,
                     up.x, up.y, up.z, XMConvertToDegrees(m_fov));
 
-                const WCHAR* mode = m_ccw ? L"Counter clockwise" : L"Clockwise";
+                const wchar_t* mode = m_ccw ? L"Counter clockwise" : L"Clockwise";
                 if (m_wireframe)
                     mode = L"Wireframe";
 
-                WCHAR szState[128] = { 0 };
-                swprintf_s(szState, L"%ls", mode);
+                const wchar_t* toneMap = L"*UNKNOWN*";
+                switch (m_toneMapMode)
+                {
+                case ToneMapPostProcess::Saturate: toneMap = L"None"; break;
+                case ToneMapPostProcess::Reinhard: toneMap = L"Reinhard"; break;
+                case ToneMapPostProcess::ACESFilmic: toneMap = L"ACES Filmic"; break;
+                }
 
-                WCHAR szMode[64] = { 0 };
+                wchar_t szState[128] = { 0 };
+                swprintf_s(szState, L"%ls    Tone-mapping operator: %ls", mode, toneMap);
+
+                wchar_t szMode[64] = { 0 };
                 swprintf_s(szMode, L" %ls (Sensitivity: %8.4f)", (m_fpscamera) ? L"  FPS" : L"Orbit", m_sensitivity);
 
                 Vector2 modeLen = m_fontConsolas->MeasureString(szMode);
@@ -647,6 +658,22 @@ void Game::Render()
         }
     }
 
+    m_hdrScene->EndScene(commandList);
+
+    PIXEndEvent(commandList);
+
+    PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"ToneMap");
+
+    auto rtvDescriptor = m_deviceResources->GetRenderTargetView();
+    commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, nullptr);
+
+    switch (m_toneMapMode)
+    {
+    case ToneMapPostProcess::Reinhard:      m_toneMapReinhard->Process(commandList); break;
+    case ToneMapPostProcess::ACESFilmic:    m_toneMapACESFilmic->Process(commandList); break;
+    default:                                m_toneMapSaturate->Process(commandList); break;
+    }
+
     PIXEndEvent(commandList);
 
     // Show the new frame.
@@ -663,7 +690,7 @@ void Game::Clear()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Clear");
 
     // Clear the views.
-    auto rtvDescriptor = m_deviceResources->GetRenderTargetView();
+    auto rtvDescriptor = m_renderDescriptors->GetCpuHandle(RTVDescriptors::HDRScene);
     auto dsvDescriptor = m_deviceResources->GetDepthStencilView();
 
     commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
@@ -715,7 +742,7 @@ void Game::OnWindowSizeChanged(int width, int height)
 }
 #endif
 
-void Game::OnFileOpen(const WCHAR* filename)
+void Game::OnFileOpen(const wchar_t* filename)
 {
     if (!filename)
         return;
@@ -745,11 +772,29 @@ void Game::CreateDeviceDependentResources()
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
         Descriptors::Count);
 
+    m_renderDescriptors = std::make_unique<DescriptorHeap>(device,
+        D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+        D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+        RTVDescriptors::RTVCount);
+
+    m_hdrScene->SetDevice(device, m_resourceDescriptors->GetCpuHandle(Descriptors::SceneTex), m_renderDescriptors->GetCpuHandle(RTVDescriptors::HDRScene));
+
     m_states = std::make_unique<CommonStates>(device);
 
     m_lineBatch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(device);
 
-    RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), m_deviceResources->GetDepthBufferFormat());
+    RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), DXGI_FORMAT_UNKNOWN);
+
+    m_toneMapSaturate = std::make_unique<ToneMapPostProcess>(device, rtState, ToneMapPostProcess::Saturate, ToneMapPostProcess::SRGB);
+    m_toneMapSaturate->SetHDRSourceTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SceneTex));
+
+    m_toneMapReinhard = std::make_unique<ToneMapPostProcess>(device, rtState, ToneMapPostProcess::Reinhard, ToneMapPostProcess::SRGB);
+    m_toneMapReinhard->SetHDRSourceTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SceneTex));
+
+    m_toneMapACESFilmic = std::make_unique<ToneMapPostProcess>(device, rtState, ToneMapPostProcess::ACESFilmic, ToneMapPostProcess::SRGB);
+    m_toneMapACESFilmic->SetHDRSourceTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SceneTex));
+
+    RenderTargetState hdrState(m_hdrScene->GetFormat(), m_deviceResources->GetDepthBufferFormat());
 
     {
         EffectPipelineStateDescription pd(
@@ -757,7 +802,7 @@ void Game::CreateDeviceDependentResources()
             CommonStates::Opaque,
             CommonStates::DepthRead,
             CommonStates::CullNone,
-            rtState, D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+            hdrState, D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
         m_lineEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
     }
@@ -767,7 +812,7 @@ void Game::CreateDeviceDependentResources()
     resourceUpload.Begin();
 
     {
-        SpriteBatchPipelineStateDescription pd(rtState);
+        SpriteBatchPipelineStateDescription pd(hdrState);
         m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
     }
 
@@ -793,6 +838,9 @@ void Game::CreateWindowSizeDependentResources()
     m_spriteBatch->SetViewport(viewport);
 
     auto size = m_deviceResources->GetOutputSize();
+
+    m_hdrScene->SetWindow(size);
+
     m_ballCamera.SetWindow(size.right, size.bottom);
     m_ballModel.SetWindow(size.right, size.bottom);
 
@@ -817,7 +865,16 @@ void Game::OnDeviceLost()
     m_lineBatch.reset();
 
     m_states.reset();
+
+    m_toneMapSaturate.reset();
+    m_toneMapReinhard.reset();
+    m_toneMapACESFilmic.reset();
+
     m_resourceDescriptors.reset();
+    m_renderDescriptors.reset();
+
+    m_hdrScene->ReleaseDevice();
+
     m_graphicsMemory.reset();
 }
 
@@ -847,10 +904,10 @@ void Game::LoadModel()
     if (!*m_szModelName)
         return;
 
-    WCHAR drive[_MAX_DRIVE];
-    WCHAR path[MAX_PATH];
-    WCHAR ext[_MAX_EXT];
-    WCHAR fname[_MAX_FNAME];
+    wchar_t drive[_MAX_DRIVE];
+    wchar_t path[MAX_PATH];
+    wchar_t ext[_MAX_EXT];
+    wchar_t fname[_MAX_FNAME];
     _wsplitpath_s(m_szModelName, drive, _MAX_DRIVE, path, MAX_PATH, fname, _MAX_FNAME, ext, _MAX_EXT);
 
     bool isvbo = false;
@@ -891,13 +948,11 @@ void Game::LoadModel()
 
         m_modelResources = std::make_unique<EffectTextureFactory>(device, resourceUpload, 1000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
 
-#ifdef GAMMA_CORRECT_RENDERING
         m_modelResources->EnableForceSRGB(true);
-#endif
 
         if (*drive || *path)
         {
-            WCHAR dir[MAX_PATH] = { 0 };
+            wchar_t dir[MAX_PATH] = { 0 };
             _wmakepath_s(dir, drive, path, nullptr, nullptr);
             m_modelResources->SetDirectory(dir);
         }
@@ -918,7 +973,7 @@ void Game::LoadModel()
         {
             m_fxFactory = std::make_unique<EffectFactory>(m_modelResources->Heap(), m_states->Heap());
 
-            RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), m_deviceResources->GetDepthBufferFormat());
+            RenderTargetState hdrState(m_hdrScene->GetFormat(), m_deviceResources->GetDepthBufferFormat());
 
             if (isvbo)
             {
@@ -927,7 +982,7 @@ void Game::LoadModel()
                     CommonStates::Opaque,
                     CommonStates::DepthDefault,
                     CommonStates::CullClockwise,
-                    rtState);
+                    hdrState);
 
                 auto effect = std::make_shared<BasicEffect>(device, EffectFlags::Lighting, pd);
                 effect->EnableDefaultLighting();
@@ -952,14 +1007,14 @@ void Game::LoadModel()
                     CommonStates::Opaque,
                     CommonStates::DepthDefault,
                     CommonStates::CullClockwise,
-                    rtState);
+                    hdrState);
 
                 EffectPipelineStateDescription pdAlpha(
                     nullptr,
                     CommonStates::AlphaBlend,
                     CommonStates::DepthDefault,
                     CommonStates::CullClockwise,
-                    rtState);
+                    hdrState);
 
                 m_modelClockwise = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
 
@@ -1174,6 +1229,16 @@ void Game::CycleBackgroundColor()
     }
 }
 
+void Game::CycleToneMapOperator()
+{
+    m_toneMapMode += 1;
+
+    if (m_toneMapMode >= ToneMapPostProcess::Operator_Max)
+    {
+        m_toneMapMode = ToneMapPostProcess::Saturate;
+    }
+}
+
 void Game::CreateProjection()
 {
     auto size = m_deviceResources->GetOutputSize();
@@ -1204,7 +1269,7 @@ void Game::EnumerateModelFiles()
 
     WIN32_FIND_DATA ffdata = { 0 };
 
-    static const WCHAR* exts[] = { L"D:\\*.sdkmesh", L"D:\\*.vbo" };
+    static const wchar_t* exts[] = { L"D:\\*.sdkmesh", L"D:\\*.vbo" };
 
     for (size_t j = 0; j < _countof(exts); ++j)
     {

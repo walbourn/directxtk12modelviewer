@@ -9,7 +9,19 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
-bool DX::DeviceResources::s_render4K = false;
+namespace
+{
+    inline DXGI_FORMAT NoSRGB(DXGI_FORMAT fmt)
+    {
+        switch (fmt)
+        {
+        case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:   return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:   return DXGI_FORMAT_B8G8R8A8_UNORM;
+        case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:   return DXGI_FORMAT_B8G8R8X8_UNORM;
+        default:                                return fmt;
+        }
+    }
+};
 
 // Constructor for DeviceResources.
 DX::DeviceResources::DeviceResources(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat, UINT backBufferCount) :
@@ -41,29 +53,18 @@ DX::DeviceResources::~DeviceResources()
 // Configures the Direct3D device, and stores handles to it and the device context.
 void DX::DeviceResources::CreateDeviceResources() 
 {
-#if defined(_DEBUG)
-    // Enable the debug layer.
-    {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_GRAPHICS_PPV_ARGS(debugController.GetAddressOf()))))
-        {
-            debugController->EnableDebugLayer();
-        }
-    }
-#elif defined(PROFILE)
-    // Enable the instrumented driver.
-    {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_GRAPHICS_PPV_ARGS(debugController.GetAddressOf()))))
-        {
-            debugController->SetProcessDebugFlags(D3D12XBOX_PROCESS_DEBUG_FLAG_INSTRUMENTED);
-        }
-    }
-#endif
-
     // Create the DX12 API device object.
     D3D12XBOX_CREATE_DEVICE_PARAMETERS params = {};
     params.Version = D3D12_SDK_VERSION;
+
+#if defined(_DEBUG)
+    // Enable the debug layer.
+    params.ProcessDebugFlags = D3D12_PROCESS_DEBUG_FLAG_DEBUG_LAYER_ENABLED;
+#elif defined(PROFILE)
+    // Enable the instrumented driver.
+    params.ProcessDebugFlags = D3D12XBOX_PROCESS_DEBUG_FLAG_INSTRUMENTED;
+#endif
+
     params.GraphicsCommandQueueRingSizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
     params.GraphicsScratchMemorySizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
     params.ComputeScratchMemorySizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
@@ -119,26 +120,17 @@ void DX::DeviceResources::CreateDeviceResources()
         throw std::exception("CreateEvent");
     }
 
-#if _XDK_VER >= 0x38390868 /* XDK Edition 161000 */
-    if (s_render4K)
+#if _XDK_VER >= 0x3F5B03F5 /* XDK Edition 170600 */
     {
         D3D12XBOX_GPU_HARDWARE_CONFIGURATION hwConfig = {};
         m_d3dDevice->GetGpuHardwareConfigurationX(&hwConfig);
-        if (hwConfig.HardwareVersion >= D3D12XBOX_HARDWARE_VERSION_XBOX_ONE_S)
+        if (hwConfig.HardwareVersion >= D3D12XBOX_HARDWARE_VERSION_XBOX_ONE_X)
         {
             m_outputSize = { 0, 0, 3840, 2160 };
-        }
 #ifdef _DEBUG
-        else
-        {
-            OutputDebugStringA("INFO: 4K UHD output requires Xbox One S or later; using 1080p\n");
-        }
+            OutputDebugStringA("INFO: Swapchain using 4k (3840 x 2160)\n");
 #endif
-    }
-#elif defined(_DEBUG)
-    if (s_render4K)
-    {
-        OutputDebugStringA("WARNING: 4K UHD detection not supported prior to October 2016 XDK; using 1080p\n");
+        }
     }
 #endif
 }
@@ -164,6 +156,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
     // Determine the render target size in pixels.
     UINT backBufferWidth = std::max<UINT>(m_outputSize.right - m_outputSize.left, 1);
     UINT backBufferHeight = std::max<UINT>(m_outputSize.bottom - m_outputSize.top, 1);
+    DXGI_FORMAT backBufferFormat = NoSRGB(m_backBufferFormat);
 
     // If the swap chain already exists, resize it, otherwise create one.
     if (m_swapChain)
@@ -173,7 +166,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
             m_backBufferCount,
             backBufferWidth,
             backBufferHeight,
-            m_backBufferFormat,
+            backBufferFormat,
             0
             ));
 
@@ -197,7 +190,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
         swapChainDesc.Width = backBufferWidth;
         swapChainDesc.Height = backBufferHeight;
-        swapChainDesc.Format = m_backBufferFormat;
+        swapChainDesc.Format = backBufferFormat;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         swapChainDesc.BufferCount = m_backBufferCount;
         swapChainDesc.SampleDesc.Count = 1;
@@ -228,8 +221,12 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
         swprintf_s(name, L"Render target %u", n);
         m_renderTargets[n]->SetName(name);
 
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = m_backBufferFormat;
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), n, m_rtvDescriptorSize);
-        m_d3dDevice->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvDescriptor);
+        m_d3dDevice->CreateRenderTargetView(m_renderTargets[n].Get(), &rtvDesc, rtvDescriptor);
     }
 
     // Reset the index to the current back buffer.

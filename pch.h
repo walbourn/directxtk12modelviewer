@@ -100,6 +100,7 @@ namespace DX
 #include <Keyboard.h>
 #include <Model.h>
 #include <Mouse.h>
+#include <PostProcess.h>
 #include <PrimitiveBatch.h>
 #include <ResourceUploadBatch.h>
 #include <SimpleMath.h>
