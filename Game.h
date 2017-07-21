@@ -53,6 +53,7 @@ public:
 
     // Properties
     void GetDefaultSize( int& width, int& height ) const;
+    bool RequestHDRMode() const { return m_deviceResources ? (m_deviceResources->GetDeviceOptions() & DX::DeviceResources::c_EnableHDR) != 0 : false; }
 
 private:
 
@@ -99,6 +100,10 @@ private:
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapSaturate;
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapReinhard;
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapACESFilmic;
+#if !defined(_XBOX_ONE) || !defined(_TITLE)
+    std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapLinear;
+    std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapHDR10;
+#endif
 
     std::unique_ptr<DirectX::EffectFactory>         m_fxFactory;
     std::unique_ptr<DirectX::EffectTextureFactory>  m_modelResources;
