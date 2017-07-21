@@ -4,13 +4,14 @@ Model Viewer for DirectX Tool Kit for DirectX 12
 
 Copyright (c) Microsoft Corporation. All rights reserved.
 
-June 23, 2017
+July 20, 2017
 
 The DirectX Tool Kit Model Viewer is an interactive test application for
 validating .SDKMESH and .VBO files rendered using the DirectX Tool Kit.
 
-This code is designed to build with Visual Studio 2015 or 2017. It is recommended that you
-make use of VS 2015 Update 3 or VS 2017.
+The source is written for Visual Studio 2015 or 2017. It is recommended you use
+VS 2015 Update 3 with the Windows 10 Anniversary SDK (14393) or VS 2017 with the latest updates
+and the Windows 10 Creators Update SDK (15063).
 
 All content and source code for this package are subject to the terms of the MIT License.
 <http://opensource.org/licenses/MIT>.
@@ -163,6 +164,9 @@ the system:
 ---------------
 RELEASE HISTORY
 ---------------
+
+July 20, 2017
+    Added HDR10 display output support
 
 June 23, 2017
     Added tone-mapping
