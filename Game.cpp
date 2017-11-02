@@ -790,7 +790,7 @@ void Game::OnResuming()
     m_gamepadButtonTracker.Reset();
 }
 
-#if !defined(_XBOXONE) || !defined(_TITLE)
+#if !defined(_XBOX_ONE) || !defined(_TITLE)
 void Game::OnWindowMoved()
 {
     auto r = m_deviceResources->GetOutputSize();
