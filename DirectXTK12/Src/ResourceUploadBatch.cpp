@@ -1,12 +1,8 @@
 //--------------------------------------------------------------------------------------
 // File: ResourceUploadBatch.cpp
 //
-// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-// PARTICULAR PURPOSE.
-//
 // Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
 //--------------------------------------------------------------------------------------
@@ -187,7 +183,7 @@ namespace
             CD3DX12_DESCRIPTOR_RANGE sourceDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
             CD3DX12_DESCRIPTOR_RANGE targetDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
-            CD3DX12_ROOT_PARAMETER rootParameters[RootParameterIndex::RootParameterCount];
+            CD3DX12_ROOT_PARAMETER rootParameters[RootParameterIndex::RootParameterCount] = {};
             rootParameters[RootParameterIndex::Constants].InitAsConstants(Num32BitConstants, 0);
             rootParameters[RootParameterIndex::SourceTexture].InitAsDescriptorTable(1, &sourceDescriptorRange);
             rootParameters[RootParameterIndex::TargetTexture].InitAsDescriptorTable(1, &targetDescriptorRange);
@@ -678,6 +674,8 @@ private:
         ComPtr<ID3D12Heap> heap;
         ThrowIfFailed(mDevice->CreateHeap(&heapDesc, IID_GRAPHICS_PPV_ARGS(heap.GetAddressOf())));
 
+        SetDebugObjectName(heap.Get(), L"ResourceUploadBatch");
+
         ComPtr<ID3D12Resource> resourceCopy;
         ThrowIfFailed(mDevice->CreatePlacedResource(
             heap.Get(),
@@ -745,6 +743,8 @@ private:
         ComPtr<ID3D12GraphicsCommandList>       CommandList;
         ComPtr<ID3D12Fence>  			        Fence;
         HANDLE                                  GpuCompleteEvent;
+
+        UploadBatch() noexcept : GpuCompleteEvent(nullptr) {}
     };
 
     ComPtr<ID3D12Device>                        mDevice;
@@ -772,14 +772,14 @@ ResourceUploadBatch::~ResourceUploadBatch()
 
 
 // Move constructor.
-ResourceUploadBatch::ResourceUploadBatch(ResourceUploadBatch&& moveFrom)
+ResourceUploadBatch::ResourceUploadBatch(ResourceUploadBatch&& moveFrom) noexcept
     : pImpl(std::move(moveFrom.pImpl))
 {
 }
 
 
 // Move assignment.
-ResourceUploadBatch& ResourceUploadBatch::operator= (ResourceUploadBatch&& moveFrom)
+ResourceUploadBatch& ResourceUploadBatch::operator= (ResourceUploadBatch&& moveFrom) noexcept
 {
     pImpl = std::move(moveFrom.pImpl);
     return *this;

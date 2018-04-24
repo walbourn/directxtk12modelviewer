@@ -1,12 +1,8 @@
 //--------------------------------------------------------------------------------------
 // File: LinearAllocator.cpp
 //
-// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-// PARTICULAR PURPOSE.
-//
 // Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
 //--------------------------------------------------------------------------------------
@@ -25,21 +21,7 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-namespace
-{
-    inline size_t AlignOffset(size_t offset, size_t alignment)
-    {
-        if (alignment > 0)
-        {
-            // Alignment must be a power of 2
-            assert((alignment & (alignment - 1)) == 0);
-            offset = (offset + alignment - 1) & ~(alignment - 1);
-        }
-        return offset;
-    }
-}
-
-LinearAllocatorPage::LinearAllocatorPage()
+LinearAllocatorPage::LinearAllocatorPage() noexcept
     : pPrevPage(nullptr)
     , pNextPage(nullptr)
     , mMemory(nullptr)
@@ -53,7 +35,7 @@ LinearAllocatorPage::LinearAllocatorPage()
 
 size_t LinearAllocatorPage::Suballocate(_In_ size_t size, _In_ size_t alignment)
 {
-    size_t offset = AlignOffset(mOffset, alignment);
+    size_t offset = AlignUp(mOffset, alignment);
 #ifdef _DEBUG
     if (offset + size > mSize)
         throw std::exception("Out of free memory in page suballoc");
@@ -278,7 +260,7 @@ LinearAllocatorPage* LinearAllocator::FindPageForAlloc(
 {
     for (LinearAllocatorPage* page = list; page != nullptr; page = page->pNextPage)
     {
-        size_t offset = AlignOffset(page->mOffset, alignment);
+        size_t offset = AlignUp(page->mOffset, alignment);
         if (offset + sizeBytes <= m_increment)
             return page;
     }
@@ -305,10 +287,7 @@ LinearAllocatorPage* LinearAllocator::GetNewPage()
     }
 
 #if defined(_DEBUG) || defined(PROFILE)
-    if (!m_debugName.empty())
-    {
-        spResource->SetName(m_debugName.c_str());
-    }
+    spResource->SetName(m_debugName.empty() ? L"LinearAllocator" : m_debugName.c_str());
 #endif
 
     // Get a pointer to the memory
