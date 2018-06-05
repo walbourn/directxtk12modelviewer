@@ -25,7 +25,7 @@ namespace
     const XMVECTORF32 c_CornflowerBlue = { 0.127438f, 0.300544f, 0.846873f, 1.f };
 }
 
-Game::Game() :
+Game::Game() noexcept(false) :
     m_gridScale(10.f),
     m_fov(XM_PI / 4.f),
     m_zoom(1.f),

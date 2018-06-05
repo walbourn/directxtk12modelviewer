@@ -16,7 +16,7 @@ namespace DX
         DeviceResources(DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM,
                         DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT,
                         UINT backBufferCount = 2,
-                        unsigned int flags = 0);
+                        unsigned int flags = 0) noexcept(false);
         ~DeviceResources();
 
         void CreateDeviceResources();
@@ -68,7 +68,7 @@ namespace DX
     private:
         void MoveToNextFrame();
 
-        const static size_t MAX_BACK_BUFFER_COUNT = 3;
+        static const size_t MAX_BACK_BUFFER_COUNT = 3;
 
         UINT                                                m_backBufferIndex;
 
