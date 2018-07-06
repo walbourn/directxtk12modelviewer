@@ -1057,6 +1057,8 @@ void Game::LoadModel()
 
         resourceUpload.Begin();
 
+        m_model->LoadStaticBuffers(device, resourceUpload, true);
+
         m_modelResources = std::make_unique<EffectTextureFactory>(device, resourceUpload, 1000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
 
         m_modelResources->EnableForceSRGB(true);
