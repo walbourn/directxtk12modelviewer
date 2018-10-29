@@ -11,10 +11,8 @@
 
 #if defined(_XBOX_ONE) && defined(_TITLE)
 #include <d3d12_x.h>
-#include <d3dx12_x.h>
 #else
 #include <d3d12.h>
-#include "d3dx12.h"
 #endif
 
 #include <stdexcept>
@@ -89,7 +87,10 @@ namespace DirectX
                 throw std::out_of_range("D3DX12_GPU_DESCRIPTOR_HANDLE");
             }
             assert(m_desc.Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-            return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_hGPU, static_cast<INT>(index), m_increment);
+
+            D3D12_GPU_DESCRIPTOR_HANDLE handle;
+            handle.ptr = m_hGPU.ptr + UINT64(index) * UINT64(m_increment);
+            return handle;
         }
 
         D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle(_In_ size_t index) const
@@ -99,7 +100,10 @@ namespace DirectX
             {
                 throw std::out_of_range("D3DX12_CPU_DESCRIPTOR_HANDLE");
             }
-            return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_hCPU, static_cast<INT>(index), m_increment);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle;
+            handle.ptr = m_hCPU.ptr + UINT64(index) * UINT64(m_increment);
+            return handle;
         }
 
         size_t Count() const { return m_desc.NumDescriptors; }
@@ -117,8 +121,8 @@ namespace DirectX
 
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>    m_pHeap;
         D3D12_DESCRIPTOR_HEAP_DESC                      m_desc;
-        CD3DX12_CPU_DESCRIPTOR_HANDLE                   m_hCPU;
-        CD3DX12_GPU_DESCRIPTOR_HANDLE                   m_hGPU;
+        D3D12_CPU_DESCRIPTOR_HANDLE                     m_hCPU;
+        D3D12_GPU_DESCRIPTOR_HANDLE                     m_hGPU;
         uint32_t                                        m_increment;
     };
 
@@ -185,27 +189,7 @@ namespace DirectX
             return start;
         }
 
-        void AllocateRange(size_t numDescriptors, _Out_ IndexType& start, _Out_ IndexType& end)
-        {
-            // make sure we didn't allocate zero
-            if (numDescriptors == 0)
-            {
-                throw std::out_of_range("Can't allocate zero descriptors");
-            }
-
-            // get the current top
-            start = m_top;
-
-            // increment top with new request
-            m_top += numDescriptors;
-            end = m_top;
-
-            // make sure we have enough room
-            if (m_top >= Count())
-            {
-                throw std::exception("Can't allocate more descriptors");
-            }
-        }
+        void AllocateRange(size_t numDescriptors, _Out_ IndexType& start, _Out_ IndexType& end);
 
     private:
         IndexType m_top;

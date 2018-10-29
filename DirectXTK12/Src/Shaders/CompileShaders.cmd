@@ -13,6 +13,7 @@ echo usage: CompileShaders [xbox]
 exit /b
 
 :continuexbox
+set XBOXPREFIX=XboxOne
 set XBOXOPTS=/D__XBOX_DISABLE_SHADER_NAME_EMPLACEMENT
 if NOT %2.==noprecompile. goto skipnoprecompile
 set XBOXOPTS=%XBOXOPTS% /D__XBOX_DISABLE_PRECOMPILE=1
@@ -39,6 +40,7 @@ if exist %PCFXC% goto continue
 set PCFXC=fxc.exe
 
 :continue
+@if not exist Compiled mkdir Compiled
 call :CompileShader%1 AlphaTestEffect vs VSAlphaTest
 call :CompileShader%1 AlphaTestEffect vs VSAlphaTestNoFog
 call :CompileShader%1 AlphaTestEffect vs VSAlphaTestVc
@@ -244,21 +246,21 @@ echo %fxc%
 exit /b
 
 :CompileShaderxbox
-set fxc=%XBOXFXC% %1.fx %FXCOPTS% /T%2_5_0 %XBOXOPTS% /E%3 /FhCompiled\XboxOne%1_%3.inc /FdCompiled\XboxOne%1_%3.pdb /Vn%1_%3
+set fxc=%XBOXFXC% %1.fx %FXCOPTS% /T%2_5_0 %XBOXOPTS% /E%3 /FhCompiled\%XBOXPREFIX%%1_%3.inc /FdCompiled\%XBOXPREFIX%%1_%3.pdb /Vn%1_%3
 echo.
 echo %fxc%
 %fxc% || set error=1
 exit /b
 
 :CompileShaderHLSLxbox
-set fxc=%XBOXFXC% %1.hlsl %FXCOPTS% /T%2_5_0 %XBOXOPTS% /E%3 /FhCompiled\XboxOne%1_%3.inc /FdCompiled\XboxOne%1_%3.pdb /Vn%1_%3
+set fxc=%XBOXFXC% %1.hlsl %FXCOPTS% /T%2_5_0 %XBOXOPTS% /E%3 /FhCompiled\%XBOXPREFIX%%1_%3.inc /FdCompiled\%XBOXPREFIX%%1_%3.pdb /Vn%1_%3
 echo.
 echo %fxc%
 %fxc% || set error=1
 exit /b
 
 :CompileComputeShaderxbox
-set fxc==%XBOXFXC% %1.hlsl %FXCOPTS% /Tcs_5_0 %XBOXOPTS% /E%2 /FhCompiled\XboxOne%1_%2.inc /FdCompiled\XboxOne%1_%2.pdb /Vn%1_%2
+set fxc==%XBOXFXC% %1.hlsl %FXCOPTS% /Tcs_5_0 %XBOXOPTS% /E%2 /FhCompiled\%XBOXPREFIX%%1_%2.inc /FdCompiled\%XBOXPREFIX%%1_%2.pdb /Vn%1_%2
 echo.
 echo %fxc%
 %fxc% || set error=1
