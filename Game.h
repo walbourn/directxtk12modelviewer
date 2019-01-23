@@ -94,7 +94,7 @@ private:
     DX::StepTimer                                   m_timer;
 
     std::unique_ptr<DirectX::GraphicsMemory>        m_graphicsMemory;
-    std::unique_ptr<DirectX::DescriptorHeap>        m_resourceDescriptors;
+    std::unique_ptr<DirectX::DescriptorPile>        m_resourceDescriptors;
     std::unique_ptr<DirectX::DescriptorHeap>        m_renderDescriptors;
     std::unique_ptr<DirectX::CommonStates>          m_states;
 
@@ -110,6 +110,7 @@ private:
 #endif
 
     std::unique_ptr<DirectX::EffectFactory>         m_fxFactory;
+    std::unique_ptr<DirectX::PBREffectFactory>      m_pbrFXFactory;
     std::unique_ptr<DirectX::EffectTextureFactory>  m_modelResources;
     std::unique_ptr<DirectX::Model>                 m_model;
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelClockwise;
@@ -120,12 +121,24 @@ private:
     std::unique_ptr<DirectX::SpriteFont>            m_fontConsolas;
     std::unique_ptr<DirectX::SpriteFont>            m_fontComic;
 
+    static const size_t s_nIBL = 3;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource>          m_radianceIBL[s_nIBL];
+    Microsoft::WRL::ComPtr<ID3D12Resource>          m_irradianceIBL[s_nIBL];
+
     enum Descriptors
     {
         ConsolasFont,
         ComicFont,
         SceneTex,
-        Count
+        RadianceIBL1,
+        RadianceIBL2,
+        RadianceIBL3,
+        IrradianceIBL1,
+        IrradianceIBL2,
+        IrradianceIBL3,
+        Reserve,
+        Count = 1024
     };
 
     enum RTVDescriptors
@@ -162,6 +175,7 @@ private:
     float                                           m_farPlane;
     float                                           m_sensitivity;
     size_t                                          m_gridDivs;
+    uint32_t                                        m_ibl;
 
     bool                                            m_showHud;
     bool                                            m_showCross;

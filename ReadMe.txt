@@ -91,12 +91,13 @@ KEYBOARD:
    J toggles the cross display
    R toggles wireframe
    T cycles tone-mapping operator
-
-
+`
    [/] scales the FOV
    +/- scales the grid size
 
    O loads model          
+
+   Enter/Backspace cycles Image-Based Lighting for PBR models
 
    Home key resets camera to default position
 

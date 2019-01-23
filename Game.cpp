@@ -13,6 +13,8 @@ extern bool g_HDRMode;
 #else
 #include "FindMedia.h"
 #endif
+#include "ReadData.h"
+#include "SDKMesh.h"
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -33,6 +35,7 @@ Game::Game() noexcept(false) :
     m_farPlane(10000.f),
     m_sensitivity(1.f),
     m_gridDivs(20),
+    m_ibl(0),
     m_showHud(true),
     m_showCross(true),
     m_showGrid(false),
@@ -304,6 +307,8 @@ void Game::Update(DX::StepTimer const& timer)
             {
                 m_cameraRot = m_modelRot = Quaternion::Identity;
             }
+
+            // TODO - m_ibl
         }
     }
 #if !defined(_XBOX_ONE) || !defined(_TITLE)
@@ -418,6 +423,22 @@ void Game::Update(DX::StepTimer const& timer)
         if (m_keyboardTracker.pressed.O)
         {
             PostMessage(m_deviceResources->GetWindowHandle(), WM_USER, 0, 0);
+        }
+
+        if (m_keyboardTracker.IsKeyPressed(Keyboard::Enter) && !kb.LeftAlt && !kb.RightAlt)
+        {
+            ++m_ibl;
+            if (m_ibl >= s_nIBL)
+            {
+                m_ibl = 0;
+            }
+        }
+        else if (m_keyboardTracker.IsKeyPressed(Keyboard::Back))
+        {
+            if (!m_ibl)
+                m_ibl = s_nIBL - 1;
+            else
+                --m_ibl;
         }
 
         // Mouse controls
@@ -588,8 +609,38 @@ void Game::Render()
         }
         else
         {
-            heaps[0] = m_modelResources->Heap();
-            commandList->SetDescriptorHeaps(_countof(heaps), heaps);
+            {
+                auto radianceTex = m_resourceDescriptors->GetGpuHandle(Descriptors::RadianceIBL1 + m_ibl);
+
+                auto diffuseDesc = m_radianceIBL[0]->GetDesc();
+
+                auto irradianceTex = m_resourceDescriptors->GetGpuHandle(Descriptors::IrradianceIBL1 + m_ibl);
+
+                for (auto& it : m_modelWireframe)
+                {
+                    auto pbr = dynamic_cast<PBREffect*>(it.get());
+                    if (pbr)
+                    {
+                        pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
+                    }
+                }
+                for (auto& it : m_modelCounterClockwise)
+                {
+                    auto pbr = dynamic_cast<PBREffect*>(it.get());
+                    if (pbr)
+                    {
+                        pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
+                    }
+                }
+                for (auto& it : m_modelClockwise)
+                {
+                    auto pbr = dynamic_cast<PBREffect*>(it.get());
+                    if (pbr)
+                    {
+                        pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
+                    }
+                }
+            }
 
             if (m_wireframe)
             {
@@ -609,9 +660,6 @@ void Game::Render()
 
                 m_model->Draw(commandList, m_modelClockwise.cbegin());
             }
-
-            heaps[0] = m_resourceDescriptors->Heap();
-            commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
             if (*m_szStatus && m_showHud)
             {
@@ -834,10 +882,11 @@ void Game::CreateDeviceDependentResources()
 
     m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
-    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device,
+    m_resourceDescriptors = std::make_unique<DescriptorPile>(device,
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-        Descriptors::Count);
+        Descriptors::Count,
+        Descriptors::Reserve);
 
     m_renderDescriptors = std::make_unique<DescriptorHeap>(device,
         D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
@@ -897,6 +946,46 @@ void Game::CreateDeviceDependentResources()
     {
         SpriteBatchPipelineStateDescription pd(hdrState);
         m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
+    }
+
+    static const wchar_t* s_radianceIBL[s_nIBL] =
+    {
+        L"Atrium_diffuseIBL.dds",
+        L"Garage_diffuseIBL.dds",
+        L"SunSubMixer_diffuseIBL.dds",
+    };
+    static const wchar_t* s_irradianceIBL[s_nIBL] =
+    {
+        L"Atrium_specularIBL.dds",
+        L"Garage_specularIBL.dds",
+        L"SunSubMixer_specularIBL.dds",
+    };
+
+    static_assert(_countof(s_radianceIBL) == _countof(s_irradianceIBL), "IBL array mismatch");
+
+    for (size_t j = 0; j < s_nIBL; ++j)
+    {
+        wchar_t radiance[_MAX_PATH] = {};
+        wchar_t irradiance[_MAX_PATH] = {};
+
+#if defined(_XBOX_ONE) && defined(_TITLE)
+        wcscpy_s(radiance, s_radianceIBL[j]);
+        wcscpy_s(irradiance, s_irradianceIBL[j]);
+#else
+        DX::FindMediaFile(radiance, _MAX_PATH, s_radianceIBL[j]);
+        DX::FindMediaFile(irradiance, _MAX_PATH, s_irradianceIBL[j]);
+#endif
+
+        DX::ThrowIfFailed(
+            CreateDDSTextureFromFile(device, resourceUpload, radiance, m_radianceIBL[j].ReleaseAndGetAddressOf())
+        );
+
+        DX::ThrowIfFailed(
+            CreateDDSTextureFromFile(device, resourceUpload, irradiance, m_irradianceIBL[j].ReleaseAndGetAddressOf())
+        );
+
+        CreateShaderResourceView(device, m_radianceIBL[j].Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::RadianceIBL1 + j), true);
+        CreateShaderResourceView(device, m_irradianceIBL[j].Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::IrradianceIBL1 + j), true);
     }
 
     auto uploadResourcesFinished = resourceUpload.End(m_deviceResources->GetCommandQueue());
@@ -961,6 +1050,7 @@ void Game::OnDeviceLost()
     m_fontComic.reset();
 
     m_fxFactory.reset();
+    m_pbrFXFactory.reset();
     m_modelResources.reset();
     m_model.reset();
     m_modelClockwise.clear();
@@ -1006,6 +1096,7 @@ void Game::LoadModel()
     m_modelResources.reset();
     m_model.reset();
     m_fxFactory.reset();
+    m_pbrFXFactory.reset();
 
     *m_szStatus = 0;
     *m_szError = 0;
@@ -1015,18 +1106,30 @@ void Game::LoadModel()
     if (!*m_szModelName)
         return;
 
-    wchar_t drive[_MAX_DRIVE];
-    wchar_t path[MAX_PATH];
-    wchar_t ext[_MAX_EXT];
-    wchar_t fname[_MAX_FNAME];
+    wchar_t drive[_MAX_DRIVE] = {};
+    wchar_t path[MAX_PATH] = {};
+    wchar_t ext[_MAX_EXT] = {};
+    wchar_t fname[_MAX_FNAME] = {};
     _wsplitpath_s(m_szModelName, drive, _MAX_DRIVE, path, MAX_PATH, fname, _MAX_FNAME, ext, _MAX_EXT);
 
     bool isvbo = false;
+    bool issdkmesh2 = false;
     try
     {
         if (_wcsicmp(ext, L".sdkmesh") == 0)
         {
-            m_model = Model::CreateFromSDKMESH(m_szModelName);
+            auto modelBin = DX::ReadData(m_szModelName);
+
+            if (modelBin.size() >= sizeof(DXUT::SDKMESH_HEADER))
+            {
+                auto hdr = reinterpret_cast<const DXUT::SDKMESH_HEADER*>(modelBin.data());
+                if (hdr->Version >= 200)
+                {
+                    issdkmesh2 = true;
+                }
+            }
+
+            m_model = Model::CreateFromSDKMESH(modelBin.data(), modelBin.size());
         }
         else if (_wcsicmp(ext, L".vbo") == 0)
         {
@@ -1059,9 +1162,12 @@ void Game::LoadModel()
 
         m_model->LoadStaticBuffers(device, resourceUpload, true);
 
-        m_modelResources = std::make_unique<EffectTextureFactory>(device, resourceUpload, 1000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+        m_modelResources = std::make_unique<EffectTextureFactory>(device, resourceUpload, m_resourceDescriptors->Heap());
 
-        m_modelResources->EnableForceSRGB(true);
+        if (!issdkmesh2)
+        {
+            m_modelResources->EnableForceSRGB(true);
+        }
 
         if (*drive || *path)
         {
@@ -1070,9 +1176,11 @@ void Game::LoadModel()
             m_modelResources->SetDirectory(dir);
         }
 
+        int txtOffset = Descriptors::Reserve;
+
         try
         {
-            (void)m_model->LoadTextures(*m_modelResources);
+            (void)m_model->LoadTextures(*m_modelResources, txtOffset);
         }
         catch (...)
         {
@@ -1084,7 +1192,17 @@ void Game::LoadModel()
 
         if (m_model)
         {
-            m_fxFactory = std::make_unique<EffectFactory>(m_modelResources->Heap(), m_states->Heap());
+            IEffectFactory *fxFactory = nullptr;
+            if (issdkmesh2)
+            {
+                m_pbrFXFactory = std::make_unique<PBREffectFactory>(m_modelResources->Heap(), m_states->Heap());
+                fxFactory = m_pbrFXFactory.get();
+            }
+            else
+            {
+                m_fxFactory = std::make_unique<EffectFactory>(m_modelResources->Heap(), m_states->Heap());
+                fxFactory = m_fxFactory.get();
+            }
 
             RenderTargetState hdrState(m_hdrScene->GetFormat(), m_deviceResources->GetDepthBufferFormat());
 
@@ -1129,17 +1247,17 @@ void Game::LoadModel()
                     CommonStates::CullClockwise,
                     hdrState);
 
-                m_modelClockwise = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
+                m_modelClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
                 pd.rasterizerDesc = CommonStates::CullCounterClockwise;
                 pdAlpha.rasterizerDesc = CommonStates::CullCounterClockwise;
 
-                m_modelCounterClockwise = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
+                m_modelCounterClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
                 pd.rasterizerDesc = CommonStates::Wireframe;
                 pdAlpha.rasterizerDesc = CommonStates::Wireframe;
                 
-                m_modelWireframe = m_model->CreateEffects(*m_fxFactory, pd, pdAlpha);
+                m_modelWireframe = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
             }
 
             // Compute mesh stats
