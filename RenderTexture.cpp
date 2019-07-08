@@ -24,13 +24,13 @@ using namespace DX;
 using Microsoft::WRL::ComPtr;
 
 RenderTexture::RenderTexture(DXGI_FORMAT format) :
-    m_format(format),
-    m_width(0),
-    m_height(0),
     m_state(D3D12_RESOURCE_STATE_COMMON),
     m_srvDescriptor{},
     m_rtvDescriptor{},
-    m_clearColor{}
+    m_clearColor{},
+    m_format(format),
+    m_width(0),
+    m_height(0)
 {
 }
 
