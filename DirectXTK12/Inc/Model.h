@@ -13,6 +13,7 @@
 #include <d3d12_x.h>
 #else
 #include <d3d12.h>
+#include <dxgiformat.h>
 #endif
 
 #include <DirectXMath.h>
@@ -28,6 +29,8 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include <wrl/client.h>
+
 #include "GraphicsMemory.h"
 #include "Effects.h"
 
@@ -39,11 +42,22 @@ namespace DirectX
     class ModelMesh;
 
     //----------------------------------------------------------------------------------
+    // Model loading options
+    enum ModelLoaderFlags : uint32_t
+    {
+        ModelLoader_Default             = 0x0,
+        ModelLoader_MaterialColorsSRGB  = 0x1,
+        ModelLoader_AllowLargeModels    = 0x2,
+    };
+
+    inline ModelLoaderFlags operator|(ModelLoaderFlags a, ModelLoaderFlags b) noexcept { return static_cast<ModelLoaderFlags>(static_cast<int>(a) | static_cast<int>(b)); }
+
+    //----------------------------------------------------------------------------------
     // Each mesh part is a submesh with a single effect
     class ModelMeshPart
     {
     public:
-        ModelMeshPart(uint32_t partIndex);
+        ModelMeshPart(uint32_t partIndex) noexcept;
         virtual ~ModelMeshPart();
 
         uint32_t                                                partIndex;      // Unique index assigned per-part in a model; used to index effects.
@@ -246,12 +260,24 @@ namespace DirectX
             int samplerDescriptorOffset = 0) const;
 
         // Loads a model from a DirectX SDK .SDKMESH file
-        static std::unique_ptr<Model> __cdecl CreateFromSDKMESH(_In_reads_bytes_(dataSize) const uint8_t* meshData, _In_ size_t dataSize, _In_opt_ ID3D12Device* device = nullptr);
-        static std::unique_ptr<Model> __cdecl CreateFromSDKMESH(_In_z_ const wchar_t* szFileName, _In_opt_ ID3D12Device* device = nullptr);
+        static std::unique_ptr<Model> __cdecl CreateFromSDKMESH(
+            _In_opt_ ID3D12Device* device,
+            _In_reads_bytes_(dataSize) const uint8_t* meshData, _In_ size_t dataSize,
+            ModelLoaderFlags flags = ModelLoader_Default);
+        static std::unique_ptr<Model> __cdecl CreateFromSDKMESH(
+            _In_opt_ ID3D12Device* device,
+            _In_z_ const wchar_t* szFileName,
+            ModelLoaderFlags flags = ModelLoader_Default);
 
         // Loads a model from a .VBO file
-        static std::unique_ptr<Model> __cdecl CreateFromVBO(_In_reads_bytes_(dataSize) const uint8_t* meshData, _In_ size_t dataSize, _In_opt_ ID3D12Device* device = nullptr);
-        static std::unique_ptr<Model> __cdecl CreateFromVBO(_In_z_ const wchar_t* szFileName, _In_opt_ ID3D12Device* device = nullptr);
+        static std::unique_ptr<Model> __cdecl CreateFromVBO(
+            _In_opt_ ID3D12Device* device,
+            _In_reads_bytes_(dataSize) const uint8_t* meshData, _In_ size_t dataSize,
+            ModelLoaderFlags flags = ModelLoader_Default);
+        static std::unique_ptr<Model> __cdecl CreateFromVBO(
+            _In_opt_ ID3D12Device* device,
+            _In_z_ const wchar_t* szFileName,
+            ModelLoaderFlags flags = ModelLoader_Default);
 
         // Utility function for getting a GPU descriptor for a mesh part/material index. If there is no texture the 
         // descriptor will be zero.

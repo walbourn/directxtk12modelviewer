@@ -1106,6 +1106,8 @@ void Game::LoadModel()
     if (!*m_szModelName)
         return;
 
+    auto device = m_deviceResources->GetD3DDevice();
+
     wchar_t drive[_MAX_DRIVE] = {};
     wchar_t path[MAX_PATH] = {};
     wchar_t ext[_MAX_EXT] = {};
@@ -1129,12 +1131,12 @@ void Game::LoadModel()
                 }
             }
 
-            m_model = Model::CreateFromSDKMESH(modelBin.data(), modelBin.size());
+            m_model = Model::CreateFromSDKMESH(device, modelBin.data(), modelBin.size());
         }
         else if (_wcsicmp(ext, L".vbo") == 0)
         {
             isvbo = true;
-            m_model = Model::CreateFromVBO(m_szModelName);
+            m_model = Model::CreateFromVBO(device, m_szModelName);
         }
         else
         {

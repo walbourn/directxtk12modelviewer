@@ -37,10 +37,10 @@ namespace DirectX
         void XM_CALLCONV DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ wchar_t const* text, FXMVECTOR position, FXMVECTOR color = Colors::White, float rotation = 0, FXMVECTOR origin = g_XMZero, float scale = 1, SpriteEffects effects = SpriteEffects_None, float layerDepth = 0) const;
         void XM_CALLCONV DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ wchar_t const* text, FXMVECTOR position, FXMVECTOR color, float rotation, FXMVECTOR origin, GXMVECTOR scale, SpriteEffects effects = SpriteEffects_None, float layerDepth = 0) const;
 
-        XMVECTOR XM_CALLCONV MeasureString(_In_z_ wchar_t const* text) const;
+        XMVECTOR XM_CALLCONV MeasureString(_In_z_ wchar_t const* text, bool ignoreWhitespace = true) const;
 
-        RECT __cdecl MeasureDrawBounds(_In_z_ wchar_t const* text, XMFLOAT2 const& position) const;
-        RECT XM_CALLCONV MeasureDrawBounds(_In_z_ wchar_t const* text, FXMVECTOR position) const;
+        RECT __cdecl MeasureDrawBounds(_In_z_ wchar_t const* text, XMFLOAT2 const& position, bool ignoreWhitespace = true) const;
+        RECT XM_CALLCONV MeasureDrawBounds(_In_z_ wchar_t const* text, FXMVECTOR position, bool ignoreWhitespace = true) const;
 
         // UTF-8
         void XM_CALLCONV DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ char const* text, XMFLOAT2 const& position, FXMVECTOR color = Colors::White, float rotation = 0, XMFLOAT2 const& origin = Float2Zero, float scale = 1, SpriteEffects effects = SpriteEffects_None, float layerDepth = 0) const;
@@ -48,25 +48,25 @@ namespace DirectX
         void XM_CALLCONV DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ char const* text, FXMVECTOR position, FXMVECTOR color = Colors::White, float rotation = 0, FXMVECTOR origin = g_XMZero, float scale = 1, SpriteEffects effects = SpriteEffects_None, float layerDepth = 0) const;
         void XM_CALLCONV DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ char const* text, FXMVECTOR position, FXMVECTOR color, float rotation, FXMVECTOR origin, GXMVECTOR scale, SpriteEffects effects = SpriteEffects_None, float layerDepth = 0) const;
 
-        XMVECTOR XM_CALLCONV MeasureString(_In_z_ char const* text) const;
+        XMVECTOR XM_CALLCONV MeasureString(_In_z_ char const* text, bool ignoreWhitespace = true) const;
 
-        RECT __cdecl MeasureDrawBounds(_In_z_ char const* text, XMFLOAT2 const& position) const;
-        RECT XM_CALLCONV MeasureDrawBounds(_In_z_ char const* text, FXMVECTOR position) const;
+        RECT __cdecl MeasureDrawBounds(_In_z_ char const* text, XMFLOAT2 const& position, bool ignoreWhitespace = true) const;
+        RECT XM_CALLCONV MeasureDrawBounds(_In_z_ char const* text, FXMVECTOR position, bool ignoreWhitespace = true) const;
 
         // Spacing properties
-        float __cdecl GetLineSpacing() const;
+        float __cdecl GetLineSpacing() const noexcept;
         void __cdecl SetLineSpacing(float spacing);
 
         // Font properties
-        wchar_t __cdecl GetDefaultCharacter() const;
+        wchar_t __cdecl GetDefaultCharacter() const noexcept;
         void __cdecl SetDefaultCharacter(wchar_t character);
 
         bool __cdecl ContainsCharacter(wchar_t character) const;
 
         // Custom layout/rendering
         Glyph const* __cdecl FindGlyph(wchar_t character) const;
-        D3D12_GPU_DESCRIPTOR_HANDLE __cdecl GetSpriteSheet() const;
-        XMUINT2 __cdecl GetSpriteSheetSize() const;
+        D3D12_GPU_DESCRIPTOR_HANDLE __cdecl GetSpriteSheet() const noexcept;
+        XMUINT2 __cdecl GetSpriteSheetSize() const noexcept;
 
         // Describes a single character glyph.
         struct Glyph
