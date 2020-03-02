@@ -10,6 +10,12 @@ using namespace DX;
 
 using Microsoft::WRL::ComPtr;
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+#endif
+
+#pragma warning(disable : 4061)
+
 namespace
 {
     inline DXGI_FORMAT NoSRGB(DXGI_FORMAT fmt)
@@ -640,7 +646,6 @@ void DeviceResources::GetAdapter(IDXGIAdapter1** ppAdapter)
             }
         }
     }
-    else
 #endif
     if (!adapter)
     {
