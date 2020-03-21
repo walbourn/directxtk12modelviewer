@@ -12,7 +12,7 @@ using Microsoft::WRL::ComPtr;
 
 namespace
 {
-    inline DXGI_FORMAT NoSRGB(DXGI_FORMAT fmt)
+    inline DXGI_FORMAT NoSRGB(DXGI_FORMAT fmt) noexcept
     {
         switch (fmt)
         {
@@ -22,7 +22,7 @@ namespace
         default:                                return fmt;
         }
     }
-};
+}
 
 // Constructor for DeviceResources.
 DeviceResources::DeviceResources(
@@ -191,9 +191,9 @@ void DeviceResources::CreateWindowSizeDependentResources()
     }
 
     // Determine the render target size in pixels.
-    UINT backBufferWidth = std::max<UINT>(static_cast<UINT>(m_outputSize.right - m_outputSize.left), 1u);
-    UINT backBufferHeight = std::max<UINT>(static_cast<UINT>(m_outputSize.bottom - m_outputSize.top), 1u);
-    DXGI_FORMAT backBufferFormat = NoSRGB(m_backBufferFormat);
+    const UINT backBufferWidth = std::max<UINT>(static_cast<UINT>(m_outputSize.right - m_outputSize.left), 1u);
+    const UINT backBufferHeight = std::max<UINT>(static_cast<UINT>(m_outputSize.bottom - m_outputSize.top), 1u);
+    const DXGI_FORMAT backBufferFormat = NoSRGB(m_backBufferFormat);
 
     // If the swap chain already exists, resize it, otherwise create one.
     if (m_swapChain)

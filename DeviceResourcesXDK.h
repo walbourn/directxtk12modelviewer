@@ -19,51 +19,57 @@ namespace DX
                         unsigned int flags = 0) noexcept(false);
         ~DeviceResources();
 
+        DeviceResources(DeviceResources&&) = default;
+        DeviceResources& operator= (DeviceResources&&) = default;
+
+        DeviceResources(DeviceResources const&) = delete;
+        DeviceResources& operator= (DeviceResources const&) = delete;
+
         void CreateDeviceResources();
         void CreateWindowSizeDependentResources();
-        void SetWindow(IUnknown* window) { m_window = window; }
+        void SetWindow(IUnknown* window) noexcept { m_window = window; }
         void Prepare(D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_PRESENT,
                      D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_RENDER_TARGET);
         void Present(D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_RENDER_TARGET);
         void WaitForGpu() noexcept;
 
         // Device Accessors.
-        RECT GetOutputSize() const { return m_outputSize; }
+        RECT GetOutputSize() const noexcept { return m_outputSize; }
 
         // Direct3D Accessors.
-        ID3D12Device*               GetD3DDevice() const            { return m_d3dDevice.Get(); }
-        IDXGISwapChain1*            GetSwapChain() const            { return m_swapChain.Get(); }
-        D3D_FEATURE_LEVEL           GetDeviceFeatureLevel() const   { return m_d3dFeatureLevel; }
-        ID3D12Resource*             GetRenderTarget() const         { return m_renderTargets[m_backBufferIndex].Get(); }
-        ID3D12Resource*             GetDepthStencil() const         { return m_depthStencil.Get(); }
-        ID3D12CommandQueue*         GetCommandQueue() const         { return m_commandQueue.Get(); }
-        ID3D12CommandAllocator*     GetCommandAllocator() const     { return m_commandAllocators[m_backBufferIndex].Get(); }
-        ID3D12GraphicsCommandList*  GetCommandList() const          { return m_commandList.Get(); }
-        DXGI_FORMAT                 GetBackBufferFormat() const     { return m_backBufferFormat; }
-        DXGI_FORMAT                 GetDepthBufferFormat() const    { return m_depthBufferFormat; }
-        D3D12_VIEWPORT              GetScreenViewport() const       { return m_screenViewport; }
-        D3D12_RECT                  GetScissorRect() const          { return m_scissorRect; }
-        UINT                        GetCurrentFrameIndex() const    { return m_backBufferIndex; }
-        UINT                        GetBackBufferCount() const      { return m_backBufferCount; }
-        unsigned int                GetDeviceOptions() const        { return m_options; }
+        ID3D12Device*               GetD3DDevice() const noexcept          { return m_d3dDevice.Get(); }
+        IDXGISwapChain1*            GetSwapChain() const noexcept          { return m_swapChain.Get(); }
+        D3D_FEATURE_LEVEL           GetDeviceFeatureLevel() const noexcept { return m_d3dFeatureLevel; }
+        ID3D12Resource*             GetRenderTarget() const noexcept       { return m_renderTargets[m_backBufferIndex].Get(); }
+        ID3D12Resource*             GetDepthStencil() const noexcept       { return m_depthStencil.Get(); }
+        ID3D12CommandQueue*         GetCommandQueue() const noexcept       { return m_commandQueue.Get(); }
+        ID3D12CommandAllocator*     GetCommandAllocator() const noexcept   { return m_commandAllocators[m_backBufferIndex].Get(); }
+        ID3D12GraphicsCommandList*  GetCommandList() const noexcept        { return m_commandList.Get(); }
+        DXGI_FORMAT                 GetBackBufferFormat() const noexcept   { return m_backBufferFormat; }
+        DXGI_FORMAT                 GetDepthBufferFormat() const noexcept  { return m_depthBufferFormat; }
+        D3D12_VIEWPORT              GetScreenViewport() const noexcept     { return m_screenViewport; }
+        D3D12_RECT                  GetScissorRect() const noexcept        { return m_scissorRect; }
+        UINT                        GetCurrentFrameIndex() const noexcept  { return m_backBufferIndex; }
+        UINT                        GetBackBufferCount() const noexcept    { return m_backBufferCount; }
+        unsigned int                GetDeviceOptions() const noexcept      { return m_options; }
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const
+        CD3DX12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const noexcept
         {
             return CD3DX12_CPU_DESCRIPTOR_HANDLE(
                 m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
                 static_cast<INT>(m_backBufferIndex), m_rtvDescriptorSize);
         }
-        CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const
+        CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const noexcept
         {
             return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
         }
 
         // Direct3D HDR Game DVR support for Xbox One.
-        IDXGISwapChain1*            GetGameDVRSwapChain() const     { return m_swapChainGameDVR.Get(); }
-        ID3D12Resource*             GetGameDVRRenderTarget() const  { return m_renderTargetsGameDVR[m_backBufferIndex].Get(); }
-        DXGI_FORMAT                 GetGameDVRFormat() const        { return m_gameDVRFormat; }
+        IDXGISwapChain1*            GetGameDVRSwapChain() const noexcept    { return m_swapChainGameDVR.Get(); }
+        ID3D12Resource*             GetGameDVRRenderTarget() const noexcept { return m_renderTargetsGameDVR[m_backBufferIndex].Get(); }
+        DXGI_FORMAT                 GetGameDVRFormat() const noexcept       { return m_gameDVRFormat; }
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE GetGameDVRRenderTargetView() const
+        CD3DX12_CPU_DESCRIPTOR_HANDLE GetGameDVRRenderTargetView() const noexcept
         {
             return CD3DX12_CPU_DESCRIPTOR_HANDLE(
                 m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
