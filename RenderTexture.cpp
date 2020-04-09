@@ -47,7 +47,7 @@ void RenderTexture::SetDevice(_In_ ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HA
     }
 
     {
-        D3D12_FEATURE_DATA_FORMAT_SUPPORT formatSupport = { m_format };
+        D3D12_FEATURE_DATA_FORMAT_SUPPORT formatSupport = { m_format, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE };
         if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &formatSupport, sizeof(formatSupport))))
         {
             throw std::exception("CheckFeatureSupport");
@@ -98,7 +98,7 @@ void RenderTexture::SizeResources(size_t width, size_t height)
         static_cast<UINT>(height),
         1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
-    D3D12_CLEAR_VALUE clearValue = { m_format };
+    D3D12_CLEAR_VALUE clearValue = { m_format, { 0 } };
     memcpy(clearValue.Color, m_clearColor, sizeof(clearValue.Color));
 
     m_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
