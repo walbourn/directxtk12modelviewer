@@ -23,11 +23,6 @@
 #include "LoaderHelpers.h"
 #include "ResourceUploadBatch.h"
 
-namespace DirectX
-{
-    uint32_t CountMips(uint32_t width, uint32_t height) noexcept;
-}
-
 using namespace DirectX;
 using namespace DirectX::LoaderHelpers;
 
@@ -232,7 +227,7 @@ namespace
         size_t arraySize,
         DXGI_FORMAT format,
         D3D12_RESOURCE_FLAGS resFlags,
-        unsigned int loadFlags,
+        DDS_LOADER_FLAGS loadFlags,
         _Outptr_ ID3D12Resource** texture) noexcept
     {
         if (!d3dDevice)
@@ -283,7 +278,7 @@ namespace
         size_t bitSize,
         size_t maxsize,
         D3D12_RESOURCE_FLAGS resFlags,
-        unsigned int loadFlags,
+        DDS_LOADER_FLAGS loadFlags,
         _Outptr_ ID3D12Resource** texture,
         std::vector<D3D12_SUBRESOURCE_DATA>& subresources,
         _Out_opt_ bool* outIsCubeMap) noexcept(false)
@@ -518,7 +513,8 @@ namespace
             size_t reservedMips = mipCount;
             if (loadFlags & (DDS_LOADER_MIP_AUTOGEN | DDS_LOADER_MIP_RESERVE))
             {
-                reservedMips = std::min<size_t>(D3D12_REQ_MIP_LEVELS, CountMips(width, height));
+                reservedMips = std::min<size_t>(D3D12_REQ_MIP_LEVELS,
+                    LoaderHelpers::CountMips(width, height));
             }
 
             hr = CreateTextureResource(d3dDevice, resDim, twidth, theight, tdepth, reservedMips - skipMip, arraySize,
@@ -627,7 +623,7 @@ HRESULT DirectX::LoadDDSTextureFromMemoryEx(
     size_t ddsDataSize,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    DDS_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture,
     std::vector<D3D12_SUBRESOURCE_DATA>& subresources,
     DDS_ALPHA_MODE* alphaMode,
@@ -717,7 +713,7 @@ HRESULT DirectX::LoadDDSTextureFromFileEx(
     const wchar_t* fileName,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    DDS_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture,
     std::unique_ptr<uint8_t[]>& ddsData,
     std::vector<D3D12_SUBRESOURCE_DATA>& subresources,
@@ -808,7 +804,7 @@ HRESULT DirectX::CreateDDSTextureFromMemoryEx(
     size_t ddsDataSize,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    DDS_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture,
     DDS_ALPHA_MODE* alphaMode,
     bool* isCubeMap)
@@ -852,7 +848,7 @@ HRESULT DirectX::CreateDDSTextureFromMemoryEx(
         DXGI_FORMAT fmt = GetPixelFormat(header);
         if (!resourceUpload.IsSupportedForGenerateMips(fmt))
         {
-            DebugTrace("WARNING: This device does not support autogen mips for this format (%d)\n", static_cast<int>(fmt));
+            DebugTrace("WARNING: Autogen of mips ignored (device doesn't support this format (%d) or trying to use a copy queue)\n", static_cast<int>(fmt));
             loadFlags &= ~DDS_LOADER_MIP_AUTOGEN;
         }
     }
@@ -926,7 +922,7 @@ HRESULT DirectX::CreateDDSTextureFromFileEx(
     const wchar_t* fileName,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    DDS_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture,
     DDS_ALPHA_MODE* alphaMode,
     bool* isCubeMap)
@@ -970,7 +966,7 @@ HRESULT DirectX::CreateDDSTextureFromFileEx(
         DXGI_FORMAT fmt = GetPixelFormat(header);
         if (!resourceUpload.IsSupportedForGenerateMips(fmt))
         {
-            DebugTrace("WARNING: This device does not support autogen mips for this format (%d)\n", static_cast<int>(fmt));
+            DebugTrace("WARNING: Autogen of mips ignored (device doesn't support this format (%d) or trying to use a copy queue)\n", static_cast<int>(fmt));
             loadFlags &= ~DDS_LOADER_MIP_AUTOGEN;
         }
     }

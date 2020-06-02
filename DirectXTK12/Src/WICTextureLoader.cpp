@@ -29,11 +29,6 @@
 #include "LoaderHelpers.h"
 #include "ResourceUploadBatch.h"
 
-namespace DirectX
-{
-    uint32_t CountMips(uint32_t width, uint32_t height) noexcept;
-}
-
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -229,7 +224,7 @@ namespace
         _In_ IWICBitmapFrameDecode *frame,
         size_t maxsize,
         D3D12_RESOURCE_FLAGS resFlags,
-        unsigned int loadFlags,
+        WIC_LOADER_FLAGS loadFlags,
         _Outptr_ ID3D12Resource** texture,
         std::unique_ptr<uint8_t[]>& decodedData,
         D3D12_SUBRESOURCE_DATA& subresource) noexcept
@@ -246,11 +241,16 @@ namespace
 
         if (!maxsize)
         {
-            maxsize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+            maxsize = size_t(D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
         }
 
-        UINT twidth, theight;
-        if (width > maxsize || height > maxsize)
+        UINT twidth = width;
+        UINT theight = height;
+        if (loadFlags & WIC_LOADER_FIT_POW2)
+        {
+            LoaderHelpers::FitPowerOf2(width, height, twidth, theight, maxsize);
+        }
+        else if (width > maxsize || height > maxsize)
         {
             float ar = static_cast<float>(height) / static_cast<float>(width);
             if (width > height)
@@ -265,10 +265,11 @@ namespace
             }
             assert(twidth <= maxsize && theight <= maxsize);
         }
-        else
+
+        if (loadFlags & WIC_LOADER_MAKE_SQUARE)
         {
-            twidth = width;
-            theight = height;
+            twidth = std::max<UINT>(twidth, theight);
+            theight = twidth;
         }
 
         // Determine format
@@ -312,6 +313,13 @@ namespace
             bpp = _WICBitsPerPixel(pixelFormat);
         }
 
+        if (loadFlags & WIC_LOADER_FORCE_RGBA32)
+        {
+            memcpy_s(&convertGUID, sizeof(WICPixelFormatGUID), &GUID_WICPixelFormat32bppRGBA, sizeof(GUID));
+            format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            bpp = 32;
+        }
+
         if (!bpp)
             return E_FAIL;
 
@@ -328,12 +336,12 @@ namespace
                 GUID containerFormat;
                 if (SUCCEEDED(metareader->GetContainerFormat(&containerFormat)))
                 {
-                    // Check for sRGB colorspace metadata
                     bool sRGB = false;
 
                     PROPVARIANT value;
                     PropVariantInit(&value);
 
+                    // Check for colorspace chunks
                     if (memcmp(&containerFormat, &GUID_ContainerFormatPng, sizeof(GUID)) == 0)
                     {
                         // Check for sRGB chunk
@@ -341,26 +349,46 @@ namespace
                         {
                             sRGB = true;
                         }
+                        else if (SUCCEEDED(metareader->GetMetadataByName(L"/gAMA/ImageGamma", &value)) && value.vt == VT_UI4)
+                        {
+                            sRGB = (value.uintVal == 45455);
+                        }
+                        else
+                        {
+                            sRGB = (loadFlags & WIC_LOADER_SRGB_DEFAULT) != 0;
+                        }
                     }
                 #if defined(_XBOX_ONE) && defined(_TITLE)
                     else if (memcmp(&containerFormat, &GUID_ContainerFormatJpeg, sizeof(GUID)) == 0)
                     {
-                        if (SUCCEEDED(metareader->GetMetadataByName(L"/app1/ifd/exif/{ushort=40961}", &value)) && value.vt == VT_UI2 && value.uiVal == 1)
+                        if (SUCCEEDED(metareader->GetMetadataByName(L"/app1/ifd/exif/{ushort=40961}", &value)) && value.vt == VT_UI2)
                         {
-                            sRGB = true;
+                            sRGB = (value.uiVal == 1);
+                        }
+                        else
+                        {
+                            sRGB = (loadFlags & WIC_LOADER_SRGB_DEFAULT) != 0;
                         }
                     }
                     else if (memcmp(&containerFormat, &GUID_ContainerFormatTiff, sizeof(GUID)) == 0)
                     {
-                        if (SUCCEEDED(metareader->GetMetadataByName(L"/ifd/exif/{ushort=40961}", &value)) && value.vt == VT_UI2 && value.uiVal == 1)
+                        if (SUCCEEDED(metareader->GetMetadataByName(L"/ifd/exif/{ushort=40961}", &value)) && value.vt == VT_UI2)
                         {
-                            sRGB = true;
+                            sRGB = (value.uiVal == 1);
+                        }
+                        else
+                        {
+                            sRGB = (loadFlags & WIC_LOADER_SRGB_DEFAULT) != 0;
                         }
                     }
                 #else
-                    else if (SUCCEEDED(metareader->GetMetadataByName(L"System.Image.ColorSpace", &value)) && value.vt == VT_UI2 && value.uiVal == 1)
+                    else if (SUCCEEDED(metareader->GetMetadataByName(L"System.Image.ColorSpace", &value)) && value.vt == VT_UI2)
                     {
-                        sRGB = true;
+                        sRGB = (value.uiVal == 1);
+                    }
+                    else
+                    {
+                        sRGB = (loadFlags & WIC_LOADER_SRGB_DEFAULT) != 0;
                     }
                 #endif
 
@@ -476,7 +504,8 @@ namespace
         }
 
         // Count the number of mips
-        uint32_t mipCount = (loadFlags & (WIC_LOADER_MIP_AUTOGEN | WIC_LOADER_MIP_RESERVE)) ? CountMips(twidth, theight) : 1;
+        uint32_t mipCount = (loadFlags & (WIC_LOADER_MIP_AUTOGEN | WIC_LOADER_MIP_RESERVE))
+            ? LoaderHelpers::CountMips(twidth, theight) : 1u;
 
         // Create texture
         D3D12_RESOURCE_DESC desc = {};
@@ -619,7 +648,7 @@ HRESULT DirectX::LoadWICTextureFromMemoryEx(
     size_t wicDataSize,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    WIC_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture,
     std::unique_ptr<uint8_t[]>& decodedData,
     D3D12_SUBRESOURCE_DATA& subresource) noexcept
@@ -684,7 +713,7 @@ HRESULT DirectX::CreateWICTextureFromMemoryEx(
     size_t wicDataSize,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    WIC_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture)
 {
     if (texture)
@@ -731,7 +760,7 @@ HRESULT DirectX::CreateWICTextureFromMemoryEx(
         DXGI_FORMAT fmt = GetPixelFormat(frame.Get());
         if (!resourceUpload.IsSupportedForGenerateMips(fmt))
         {
-            DebugTrace("WARNING: This device does not support autogen mips for this format (%d)\n", static_cast<int>(fmt));
+            DebugTrace("WARNING: Autogen of mips ignored (device doesn't support this format (%d) or trying to use a copy queue)\n", static_cast<int>(fmt));
             loadFlags &= ~WIC_LOADER_MIP_AUTOGEN;
         }
     }
@@ -819,7 +848,7 @@ HRESULT DirectX::LoadWICTextureFromFileEx(
     const wchar_t* fileName,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    WIC_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture,
     std::unique_ptr<uint8_t[]>& decodedData,
     D3D12_SUBRESOURCE_DATA& subresource) noexcept
@@ -870,7 +899,7 @@ HRESULT DirectX::CreateWICTextureFromFileEx(
     const wchar_t* fileName,
     size_t maxsize,
     D3D12_RESOURCE_FLAGS resFlags,
-    unsigned int loadFlags,
+    WIC_LOADER_FLAGS loadFlags,
     ID3D12Resource** texture)
 {
     if (texture)
@@ -905,7 +934,7 @@ HRESULT DirectX::CreateWICTextureFromFileEx(
         DXGI_FORMAT fmt = GetPixelFormat(frame.Get());
         if (!resourceUpload.IsSupportedForGenerateMips(fmt))
         {
-            DebugTrace("WARNING: This device does not support autogen mips for this format (%d)\n", static_cast<int>(fmt));
+            DebugTrace("WARNING: Autogen of mips ignored (device doesn't support this format (%d) or trying to use a copy queue)\n", static_cast<int>(fmt));
             loadFlags &= ~WIC_LOADER_MIP_AUTOGEN;
         }
     }

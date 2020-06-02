@@ -22,18 +22,26 @@
 
 #include <d3d12_x.h>
 
-#include <stdint.h>
+#include <cstdint>
+
+#ifndef DDS_ALPHA_MODE_DEFINED
+#define DDS_ALPHA_MODE_DEFINED
+namespace DirectX
+{
+    enum DDS_ALPHA_MODE : uint32_t
+    {
+        DDS_ALPHA_MODE_UNKNOWN = 0,
+        DDS_ALPHA_MODE_STRAIGHT = 1,
+        DDS_ALPHA_MODE_PREMULTIPLIED = 2,
+        DDS_ALPHA_MODE_OPAQUE = 3,
+        DDS_ALPHA_MODE_CUSTOM = 4,
+    };
+}
+#endif
 
 namespace Xbox
 {
-    enum DDS_ALPHA_MODE
-    {
-        DDS_ALPHA_MODE_UNKNOWN       = 0,
-        DDS_ALPHA_MODE_STRAIGHT      = 1,
-        DDS_ALPHA_MODE_PREMULTIPLIED = 2,
-        DDS_ALPHA_MODE_OPAQUE        = 3,
-        DDS_ALPHA_MODE_CUSTOM        = 4,
-    };
+    using DirectX::DDS_ALPHA_MODE;
 
     //
     //  NOTE: Flush the GPU caches before using textures created 

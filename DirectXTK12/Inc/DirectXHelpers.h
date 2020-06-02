@@ -25,6 +25,8 @@
 
 #include <wrl/client.h>
 
+#pragma comment(lib,"dxguid.lib")
+
 #ifndef IID_GRAPHICS_PPV_ARGS
 #define IID_GRAPHICS_PPV_ARGS(x) IID_PPV_ARGS(x)
 #endif
@@ -194,6 +196,12 @@ namespace DirectX
             mCommandList->ResourceBarrier(static_cast<UINT>(mBarriers.size()), mBarriers.data());
         }
 
+        ScopedBarrier(ScopedBarrier&&) = default;
+        ScopedBarrier& operator= (ScopedBarrier&&) = default;
+
+        ScopedBarrier(ScopedBarrier const&) = delete;
+        ScopedBarrier& operator= (ScopedBarrier const&) = delete;
+
         ~ScopedBarrier()
         {
             // reverse barrier inputs and outputs
@@ -211,6 +219,10 @@ namespace DirectX
         std::vector<D3D12_RESOURCE_BARRIER> mBarriers;
     };
 
+    // Helper to check for power-of-2
+    template<typename T>
+    constexpr bool IsPowerOf2(T x) noexcept { return ((x != 0) && !(x & (x - 1))); }
+
     // Helpers for aligning values by a power of 2
     template<typename T>
     inline T AlignDown(T size, size_t alignment) noexcept
@@ -218,7 +230,7 @@ namespace DirectX
         if (alignment > 0)
         {
             assert(((alignment - 1) & alignment) == 0);
-            T mask = static_cast<T>(alignment - 1);
+            auto mask = static_cast<T>(alignment - 1);
             return size & ~mask;
         }
         return size;
@@ -230,7 +242,7 @@ namespace DirectX
         if (alignment > 0)
         {
             assert(((alignment - 1) & alignment) == 0);
-            T mask = static_cast<T>(alignment - 1);
+            auto mask = static_cast<T>(alignment - 1);
             return (size + mask) & ~mask;
         }
         return size;
