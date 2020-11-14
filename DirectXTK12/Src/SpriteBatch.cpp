@@ -24,17 +24,27 @@ using Microsoft::WRL::ComPtr;
 namespace
 {
     // Include the precompiled shader code.
-    #if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef _GAMING_XBOX_SCARLETT
+    #include "Shaders/Compiled/XboxGamingScarlettSpriteEffect_SpriteVertexShader.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettSpriteEffect_SpritePixelShader.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettSpriteEffect_SpriteVertexShaderHeap.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettSpriteEffect_SpritePixelShaderHeap.inc"
+#elif defined(_GAMING_XBOX)
+    #include "Shaders/Compiled/XboxGamingXboxOneSpriteEffect_SpriteVertexShader.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneSpriteEffect_SpritePixelShader.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneSpriteEffect_SpriteVertexShaderHeap.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneSpriteEffect_SpritePixelShaderHeap.inc"
+#elif defined(_XBOX_ONE) && defined(_TITLE)
     #include "Shaders/Compiled/XboxOneSpriteEffect_SpriteVertexShader.inc"
     #include "Shaders/Compiled/XboxOneSpriteEffect_SpritePixelShader.inc"
     #include "Shaders/Compiled/XboxOneSpriteEffect_SpriteVertexShaderHeap.inc"
     #include "Shaders/Compiled/XboxOneSpriteEffect_SpritePixelShaderHeap.inc"
-    #else
+#else
     #include "Shaders/Compiled/SpriteEffect_SpriteVertexShader.inc"
     #include "Shaders/Compiled/SpriteEffect_SpritePixelShader.inc"
     #include "Shaders/Compiled/SpriteEffect_SpriteVertexShaderHeap.inc"
     #include "Shaders/Compiled/SpriteEffect_SpritePixelShaderHeap.inc"
-    #endif
+#endif
 
     inline bool operator != (D3D12_GPU_DESCRIPTOR_HANDLE a, D3D12_GPU_DESCRIPTOR_HANDLE b) noexcept
     {

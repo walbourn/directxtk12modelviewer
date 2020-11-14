@@ -6,9 +6,9 @@ http://go.microsoft.com/fwlink/?LinkID=615561
 
 Copyright (c) Microsoft Corporation. All rights reserved.
 
-**June 15, 2020**
+**November 11, 2020**
 
-This package contains the "DirectX Tool Kit", a collection of helper classes for writing Direct3D 12 C++ code for Universal Windows Platform (UWP) apps, Win32 desktop applications for Windows 10, and Xbox One.
+This package contains the "DirectX Tool Kit", a collection of helper classes for writing Direct3D 12 C++ code for Universal Windows Platform (UWP) apps, Win32 desktop applications for Windows 10, and Xbox.
 
 This code is designed to build with Visual Studio 2017 ([15.9](https://walbourn.github.io/vs-2017-15-9-update/)), Visual Studio 2019, or clang for Windows v9 or later. It is recommended that you make use of the Windows 10 May 2020 Update SDK ([19041](https://walbourn.github.io/windows-10-may-2020-update-sdk/)).
 
@@ -44,7 +44,7 @@ These components are designed to work without requiring any content from the leg
     * SpriteFont.h - bitmap based text rendering
     * VertexTypes.h - structures for commonly used vertex data formats
     * WICTextureLoader.h - WIC-based image file texture loader
-    * XboxDDSTextureLoader.h - Xbox One exclusive apps variant of DDSTextureLoader
+    * XboxDDSTextureLoader.h - Xbox exclusive apps variant of DDSTextureLoader
 
 * ``Src\``
 
@@ -65,12 +65,6 @@ Documentation is available on the [GitHub wiki](https://github.com/Microsoft/Dir
 All content and source code for this package are subject to the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
 For the latest version of DirectXTK12, bug reports, etc. please visit the project site on [GitHub](https://github.com/microsoft/DirectXTK12).
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-## Xbox One
-
-Developers using the Xbox One XDK need to generate the ``Src\Shaders\Compiled\XboxOne*.inc`` files to build the library as they are not included in the distribution package. They are built by running the script in ``Src\Shaders`` - ``CompileShaders xbox`` from the *Xbox One XDK Developer Command Prompt*. They are XDK version-specific. While they will continue to work if outdated, a mismatch will cause runtime compilation overhead that would otherwise be avoided.
 
 ## Comparisons to DirectX 11 Version
 
@@ -95,3 +89,15 @@ Developers using the Xbox One XDK need to generate the ``Src\Shaders\Compiled\Xb
 * The UWP projects and the VS 2019 Win10 classic desktop project include configurations for the ARM64 platform. These require VS 2017 (15.9 update) or VS 2019 to build, with the ARM64 toolset installed.
 
 * The ``CompileShaders.cmd`` script must have Windows-style (CRLF) line-endings. If it is changed to Linux-style (LF) line-endings, it can fail to build all the required shaders.
+
+## Contributing
+
+This project welcomes contributions and suggestions. Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+
+When you submit a pull request, a CLA bot will automatically determine whether you need to provide a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions provided by the bot. You will only need to do this once across all repos using our CLA.
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+## Trademarks
+
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.

@@ -54,8 +54,7 @@ namespace
 class NormalMapEffect::Impl : public EffectBase<NormalMapEffectTraits>
 {
 public:
-    Impl(_In_ ID3D12Device* device, uint32_t effectFlags, const EffectPipelineStateDescription& pipelineDescription,
-        bool specularMap);
+    Impl(_In_ ID3D12Device* device, uint32_t effectFlags, const EffectPipelineStateDescription& pipelineDescription);
 
     enum RootParameterIndex
     {
@@ -76,7 +75,7 @@ public:
 
     EffectLights lights;
 
-    int GetPipelineStatePermutation(bool vertexColorEnabled, bool biasedVertexNormals) const noexcept;
+    int GetPipelineStatePermutation(uint32_t effectFlags) const noexcept;
 
     void Apply(_In_ ID3D12GraphicsCommandList* commandList);
 };
@@ -85,7 +84,37 @@ public:
 // Include the precompiled shader code.
 namespace
 {
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef _GAMING_XBOX_SCARLETT
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTx.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVc.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxNoSpec.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcNoSpec.inc"
+
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxBn.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcBn.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc"
+
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTx.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTxNoFog.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTxNoSpec.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTxNoFogSpec.inc"
+#elif defined(_GAMING_XBOX)
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTx.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVc.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpec.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpec.inc"
+
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxBn.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcBn.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc"
+
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_PSNormalPixelLightingTx.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_PSNormalPixelLightingTxNoFog.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_PSNormalPixelLightingTxNoSpec.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_PSNormalPixelLightingTxNoFogSpec.inc"
+#elif defined(_XBOX_ONE) && defined(_TITLE)
     #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTx.inc"
     #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxVc.inc"
     #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpec.inc"
@@ -204,10 +233,9 @@ SharedResourcePool<ID3D12Device*, EffectBase<NormalMapEffectTraits>::DeviceResou
 NormalMapEffect::Impl::Impl(
     _In_ ID3D12Device* device,
     uint32_t effectFlags,
-    const EffectPipelineStateDescription& pipelineDescription,
-    bool ispecularMap)
+    const EffectPipelineStateDescription& pipelineDescription)
     : EffectBase(device),
-        specularMap(ispecularMap),
+        specularMap((effectFlags & EffectFlags::Specular) != 0),
         texture{},
         specular{},
         normal{},
@@ -263,9 +291,7 @@ NormalMapEffect::Impl::Impl(
     fog.enabled = (effectFlags & EffectFlags::Fog) != 0;
 
     // Create pipeline state.
-    int sp = GetPipelineStatePermutation(
-        (effectFlags & EffectFlags::VertexColor) != 0,
-        (effectFlags & EffectFlags::BiasedVertexNormals) != 0);
+    int sp = GetPipelineStatePermutation(effectFlags);
     assert(sp >= 0 && sp < NormalMapEffectTraits::ShaderPermutationCount);
     _Analysis_assume_(sp >= 0 && sp < NormalMapEffectTraits::ShaderPermutationCount);
 
@@ -287,7 +313,7 @@ NormalMapEffect::Impl::Impl(
 }
 
 
-int NormalMapEffect::Impl::GetPipelineStatePermutation(bool vertexColorEnabled, bool biasedVertexNormals) const noexcept
+int NormalMapEffect::Impl::GetPipelineStatePermutation(uint32_t effectFlags) const noexcept
 {
     int permutation = 0;
 
@@ -298,18 +324,17 @@ int NormalMapEffect::Impl::GetPipelineStatePermutation(bool vertexColorEnabled, 
     }
 
     // Support vertex coloring?
-    if (vertexColorEnabled)
+    if (effectFlags & EffectFlags::VertexColor)
     {
         permutation += 2;
     }
 
-    // Specular map?
     if (!specularMap)
     {
         permutation += 4;
     }
 
-    if (biasedVertexNormals)
+    if (effectFlags & EffectFlags::BiasedVertexNormals)
     {
         // Compressed normals need to be scaled and biased in the vertex shader.
         permutation += 8;
@@ -366,9 +391,8 @@ void NormalMapEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
 NormalMapEffect::NormalMapEffect(
     _In_ ID3D12Device* device,
     uint32_t effectFlags,
-    const EffectPipelineStateDescription& pipelineDescription,
-    bool specularMap)
-    : pImpl(std::make_unique<Impl>(device, effectFlags, pipelineDescription, specularMap))
+    const EffectPipelineStateDescription& pipelineDescription)
+    : pImpl(std::make_unique<Impl>(device, effectFlags, pipelineDescription))
 {
 }
 

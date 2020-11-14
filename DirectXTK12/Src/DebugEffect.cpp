@@ -62,7 +62,29 @@ public:
 // Include the precompiled shader code.
 namespace
 {
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef _GAMING_XBOX_SCARLETT
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_VSDebug.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_VSDebugVc.inc"
+
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_VSDebugBn.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_VSDebugVcBn.inc"
+
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_PSHemiAmbient.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_PSRGBNormals.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_PSRGBTangents.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettDebugEffect_PSRGBBiTangents.inc"
+#elif defined(_GAMING_XBOX)
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_VSDebug.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_VSDebugVc.inc"
+
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_VSDebugBn.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_VSDebugVcBn.inc"
+
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_PSHemiAmbient.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_PSRGBNormals.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_PSRGBTangents.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneDebugEffect_PSRGBBiTangents.inc"
+#elif defined(_XBOX_ONE) && defined(_TITLE)
     #include "Shaders/Compiled/XboxOneDebugEffect_VSDebug.inc"
     #include "Shaders/Compiled/XboxOneDebugEffect_VSDebugVc.inc"
 
