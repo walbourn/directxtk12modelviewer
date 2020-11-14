@@ -31,17 +31,15 @@ Ensure ``DirectXTKModelViewer_Desktop_201?_Win10`` is the "StartUp Project"
 
 Build and Run (F5)
 
-### Xbox One
+### Xbox
 
 Run VS 2017
 
-Open Project/Solution... ``DirectXTKModelViewer_XDK_201?.sln``
+Open Project/Solution... ``DirectXTKModelViewer_XDK_201?.sln`` or ``DirectXTKModelViewer_GDK_201?.sln``
 
-Ensure ``DirectXTKModelViewer_XDK_201?`` is the "StartUp Project"
+Ensure ``DirectXTKModelViewer_*`` is the "StartUp Project"
 
 Build and Run (F5) or use Deploy Solution
-
-> On supported platforms, you can use the -render4K command-line option.
 
 ## Usage
 ### PC
@@ -84,9 +82,9 @@ If no controller is plugged in, you can use keyboard & mouse controls. If you pr
 
     End key resets model to default rotation
 
-### Xbox One
+### Xbox
 
-For Xbox One, only the gamepad controls are available. When you press the "View" button, the tool enumerates the .SDKMESH and .VBO files in the root of the D:\ drive and allows you to select one of them to load.
+For Xbox, only the gamepad controls are available. When you press the "View" button, the tool enumerates the .SDKMESH and .VBO files in the root of the D:\ drive and allows you to select one of them to load.
 
 #### GamePad
 
@@ -137,7 +135,7 @@ For Xbox One, only the gamepad controls are available. When you press the "View"
               U – Translate Forward
               D – Translate Back
 
-For Xbox One, after you start up the viewer app, you can use the Xbox One XDK command prompt to copy data files to the system:
+For Xbox, after you start up the viewer app, you can use the Xbox Developer Command Prompt to copy data files to the system:
 
 ```
 xbcp /x/title <source directory> xd:\

@@ -8,7 +8,21 @@
 #include "pch.h"
 #include "Game.h"
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef _GAMING_XBOX
+#include <appnotify.h>
+#include <XDisplay.h>
+#include <XGameRuntimeInit.h>
+
+namespace
+{
+    HANDLE g_plmSuspendComplete = nullptr;
+    HANDLE g_plmSignalResume = nullptr;
+};
+
+bool g_HDRMode = false;
+
+void SetDisplayMode() noexcept;
+#elif defined(_XBOX_ONE) && defined(_TITLE)
 #include <ppltasks.h>
 
 using namespace concurrency;
@@ -183,6 +197,14 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     if (FAILED(hr))
         return 1;
 
+#ifdef _GAMING_XBOX
+    if (FAILED(XGameRuntimeInitialize()))
+        return 1;
+
+    PAPPSTATE_REGISTRATION hPLM = {};
+    PAPPCONSTRAIN_REGISTRATION hPLM2 = {};
+#endif
+
     g_game = std::make_unique<Game>();
 
     // Register class and create window
@@ -193,19 +215,25 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         wcex.style = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc = WndProc;
         wcex.hInstance = hInstance;
-        wcex.hIcon = LoadIconW(hInstance, L"IDI_ICON");
         wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
         wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
         wcex.lpszClassName = L"DirectXTKModelViewerWindowClass";
+#ifndef _GAMING_XBOX
+        wcex.hIcon = LoadIconW(hInstance, L"IDI_ICON");
         wcex.hIconSm = LoadIconW(wcex.hInstance, L"IDI_ICON");
+#endif
         if (!RegisterClassExW(&wcex))
             return 1;
 
         // Create window
+#ifdef _GAMING_XBOX
+        RECT rc = { 0, 0, 1920, 1080 };
+#else
         int w, h;
         g_game->GetDefaultSize(w, h);
 
         RECT rc = { 0, 0, static_cast<LONG>(w), static_cast<LONG>(h) };
+#endif
 
         AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -216,11 +244,54 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
             return 1;
 
         ShowWindow(hwnd, nCmdShow);
+
+#ifdef _GAMING_XBOX
+        SetDisplayMode();
+#endif
+
         SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(g_game.get()) );
 
         GetClientRect(hwnd, &rc);
 
+#ifdef _GAMING_XBOX
+        g_game->Initialize(hwnd);
+#else
         g_game->Initialize(hwnd, rc.right - rc.left, rc.bottom - rc.top);
+#endif
+
+#ifdef _GAMING_XBOX
+        g_plmSuspendComplete = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+        g_plmSignalResume = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+        if (!g_plmSuspendComplete || !g_plmSignalResume)
+            return 1;
+
+        if (RegisterAppStateChangeNotification([](BOOLEAN quiesced, PVOID context)
+        {
+            if (quiesced)
+            {
+                ResetEvent(g_plmSuspendComplete);
+                ResetEvent(g_plmSignalResume);
+
+                // To ensure we use the main UI thread to process the notification, we self-post a message
+                PostMessage(reinterpret_cast<HWND>(context), WM_USER, 0, 0);
+
+                // To defer suspend, you must wait to exit this callback
+                (void)WaitForSingleObject(g_plmSuspendComplete, INFINITE);
+            }
+            else
+            {
+                SetEvent(g_plmSignalResume);
+            }
+        }, hwnd, &hPLM))
+            return 1;
+
+        if (RegisterAppConstrainedChangeNotification([](BOOLEAN constrained, PVOID context)
+        {
+            // To ensure we use the main UI thread to process the notification, we self-post a message
+            SendMessage(reinterpret_cast<HWND>(context), WM_USER + 1, (constrained) ? 1u : 0u, 0);
+        }, hwnd, &hPLM2))
+            return 1;
+#endif
     }
 
     // Main message loop
@@ -240,6 +311,16 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     g_game.reset();
 
+#ifdef _GAMING_XBOX
+    UnregisterAppStateChangeNotification(hPLM);
+    UnregisterAppConstrainedChangeNotification(hPLM2);
+
+    CloseHandle(g_plmSuspendComplete);
+    CloseHandle(g_plmSignalResume);
+
+    XGameRuntimeUninitialize();
+#endif
+
     CoUninitialize();
 
     return static_cast<int>(msg.wParam);
@@ -257,6 +338,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
     {
+#ifdef _GAMING_XBOX
+    case WM_USER:
+        if (game)
+        {
+            game->OnSuspending();
+
+            // Complete deferral
+            SetEvent(g_plmSuspendComplete);
+
+            (void)WaitForSingleObject(g_plmSignalResume, INFINITE);
+
+            SetDisplayMode();
+
+            game->OnResuming();
+        }
+        break;
+
+    case WM_USER + 1:
+        if (game && !wParam)
+        {
+            SetDisplayMode();
+        }
+        break;
+#else
     case WM_PAINT:
         if (s_in_sizemove && game)
         {
@@ -325,23 +430,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
 
-    case WM_ACTIVATEAPP:
-        Keyboard::ProcessMessage(message, wParam, lParam);
-        Mouse::ProcessMessage(message, wParam, lParam);
-
-        if (game)
-        {
-            if (wParam)
-            {
-                game->OnActivated();
-            }
-            else
-            {
-                game->OnDeactivated();
-            }
-        }
-        break;
-
     case WM_POWERBROADCAST:
         switch (wParam)
         {
@@ -406,16 +494,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_INPUT:
-    case WM_MOUSEMOVE:
-    case WM_LBUTTONDOWN:
-    case WM_LBUTTONUP:
-    case WM_RBUTTONDOWN:
-    case WM_RBUTTONUP:
-    case WM_MBUTTONDOWN:
-    case WM_MBUTTONUP:
-    case WM_MOUSEWHEEL:
-    case WM_XBUTTONDOWN:
-    case WM_XBUTTONUP:
     case WM_MOUSEHOVER:
         Mouse::ProcessMessage(message, wParam, lParam);
         break;
@@ -446,6 +524,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+#endif
+
+    case WM_ACTIVATEAPP:
+#ifndef _GAMING_XBOX
+        Keyboard::ProcessMessage(message, wParam, lParam);
+#endif
+        Mouse::ProcessMessage(message, wParam, lParam);
+
+        if (game)
+        {
+            if (wParam)
+            {
+                game->OnActivated();
+            }
+            else
+            {
+                game->OnDeactivated();
+            }
+        }
+        break;
+
+    case WM_MOUSEMOVE:
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_MOUSEWHEEL:
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONUP:
+        Mouse::ProcessMessage(message, wParam, lParam);
+        break;
+
     }
 
     return DefWindowProc(hWnd, message, wParam, lParam);
@@ -455,5 +567,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 void ExitGame() noexcept
 {
     PostQuitMessage(0);
+}
+#endif
+
+#ifdef _GAMING_XBOX
+void SetDisplayMode() noexcept
+{
+    if (g_game && g_game->RequestHDRMode())
+    {
+        // Request HDR mode.
+        auto result = XDisplayTryEnableHdrMode(XDisplayHdrModePreference::PreferHdr, nullptr);
+
+        g_HDRMode = (result == XDisplayHdrModeResult::Enabled);
+
+#ifdef _DEBUG
+        OutputDebugStringA((g_HDRMode) ? "INFO: Display in HDR Mode\n" : "INFO: Display in SDR Mode\n");
+#endif
+    }
 }
 #endif

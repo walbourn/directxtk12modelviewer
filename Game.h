@@ -11,9 +11,16 @@
 #include "ArcBall.h"
 #include "RenderTexture.h"
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef _GAMING_XBOX
+#define XBOX
+#include "DeviceResourcesGXDK.h"
+#elif defined(_XBOX_ONE) && defined(_TITLE)
+#define XBOX
+#define COREWINDOW
 #include "DeviceResourcesXDK.h"
 #else
+#define PC
+#define LOSTDEVICE
 #include "DeviceResourcesPC.h"
 #endif
 
@@ -21,7 +28,7 @@
 // A basic game implementation that creates a D3D12 device and
 // provides a game loop.
 class Game
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef LOSTDEVICE
     final : public DX::IDeviceNotify
 #endif
 {
@@ -37,8 +44,10 @@ public:
     Game& operator= (Game const&) = delete;
 
     // Initialization and management
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef COREWINDOW
     void Initialize(IUnknown* window);
+#elif defined(XBOX)
+    void Initialize(HWND window);
 #else
     void Initialize(HWND window, int width, int height);
 #endif
@@ -46,7 +55,7 @@ public:
     // Basic game loop
     void Tick();
 
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef LOSTDEVICE
     // IDeviceNotify
     void OnDeviceLost() override;
     void OnDeviceRestored() override;
@@ -57,9 +66,12 @@ public:
     void OnDeactivated();
     void OnSuspending();
     void OnResuming();
+    void OnFileOpen(const wchar_t* filename);
+
+#ifdef PC
     void OnWindowMoved();
     void OnWindowSizeChanged(int width, int height);
-    void OnFileOpen(const wchar_t* filename);
+#endif
 
     // Properties
     void GetDefaultSize( int& width, int& height ) const noexcept;
@@ -88,7 +100,7 @@ private:
 
     void RotateView(DirectX::SimpleMath::Quaternion& q);
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
     void EnumerateModelFiles();
 #endif
 
@@ -110,7 +122,7 @@ private:
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapSaturate;
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapReinhard;
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapACESFilmic;
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef PC
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapLinear;
     std::unique_ptr<DirectX::ToneMapPostProcess>    m_toneMapHDR10;
 #endif

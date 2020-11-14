@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="DeviceResourcesGXDK.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderTexture.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="StepTimer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceResourcesGXDK.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ArcBall.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="FindMedia.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="ReadData.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderTexture.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="SmallLogo.png">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="SplashScreen.png">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="StoreLogo.png">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="Logo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{cc97ef49-cac3-4e8a-ac43-db095908a422}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{56c061c0-4393-4637-8ac4-e63ef7e2668a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{2cee9b24-ba87-4c3b-a517-a70ae32f631e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="comic.spritefont">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="comic4k.spritefont">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="consolas.spritefont">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="consolas4k.spritefont">
+      <Filter>Assets</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Atrium_diffuseIBL.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Atrium_specularIBL.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Garage_diffuseIBL.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Garage_specularIBL.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="SunSubMixer_diffuseIBL.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="SunSubMixer_specularIBL.dds">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

@@ -12,38 +12,41 @@
 // Use the C++ standard templated min/max
 #define NOMINMAX
 
+#include <winapifamily.h>
+
 #if defined(_XBOX_ONE) && defined(_TITLE)
-
 #include <xdk.h>
-#include <d3d12_x.h>
-#include "d3dx12_x.h"
-
 #else
 
 #include <winsdkver.h>
 #define _WIN32_WINNT 0x0A00
 #include <sdkddkver.h>
 
-// DirectX apps don't need GDI
+#pragma warning(push)
+#pragma warning(disable : 4005)
+#define NOMINMAX
 #define NODRAWTEXT
-
-// Include <mcx.h> if you need this
+#define NOBITMAP
 #define NOMCX
-
-// Include <winsvc.h> if you need this
 #define NOSERVICE
-
-// WinHelp is deprecated
 #define NOHELP
-
 #define WIN32_LEAN_AND_MEAN
+#pragma warning(pop)
+
 #include <Windows.h>
+#endif
 
 #include <wrl/client.h>
 #include <wrl/event.h>
 
+#ifdef _GAMING_XBOX_SCARLETT
+#include <d3d12_xs.h>
+#include <d3dx12_xs.h>
+#elif (defined(_XBOX_ONE) && defined(_TITLE)) || defined(_GAMING_XBOX)
+#include <d3d12_x.h>
+#include <d3dx12_x.h>
+#else
 #include <d3d12.h>
-#include "d3dx12.h"
 
 #if defined(NTDDI_WIN10_RS2)
 #include <dxgi1_6.h>
@@ -54,9 +57,10 @@
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
-#endif
 
-#include <wrl.h>
+#define D3DX12_NO_STATE_OBJECT_HELPERS
+#include "d3dx12.h"
+#endif
 
 #include <DirectXMath.h>
 #include <DirectXColors.h>
@@ -96,6 +100,12 @@ namespace DX
     {
         if (FAILED(hr))
         {
+#ifdef _DEBUG
+            char str[64] = {};
+            sprintf_s(str, "**ERROR** Fatal Error with HRESULT of %08X\n", static_cast<unsigned int>(hr));
+            OutputDebugStringA(str);
+            __debugbreak();
+#endif
             throw com_exception(hr);
         }
     }

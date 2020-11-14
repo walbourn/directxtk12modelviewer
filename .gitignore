@@ -21,6 +21,9 @@
 ARM
 ARM64
 Durango
+Gaming.Desktop.x64
+Gaming.Xbox.XboxOne.x64
+Gaming.Xbox.Scarlett.x64
 "Generated Files"
 Bin
 DirectXTK12/Src/Shaders/Compiled/*.inc

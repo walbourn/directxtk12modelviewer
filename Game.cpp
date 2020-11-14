@@ -8,7 +8,7 @@
 #include "pch.h"
 #include "Game.h"
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
 extern bool g_HDRMode;
 #else
 #include "FindMedia.h"
@@ -51,7 +51,7 @@ Game::Game() noexcept(false) :
     m_selectFile(0),
     m_firstFile(0)
 {
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
     m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM, DXGI_FORMAT_D32_FLOAT, 2,
         DX::DeviceResources::c_EnableHDR);
 #else
@@ -79,8 +79,10 @@ Game::~Game()
 }
 
 // Initialize the Direct3D resources required to run.
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef COREWINDOW
 void Game::Initialize(IUnknown* window)
+#elif defined(XBOX)
+void Game::Initialize(HWND window)
 #else
 void Game::Initialize(HWND window, int width, int height)
 #endif
@@ -89,7 +91,7 @@ void Game::Initialize(HWND window, int width, int height)
     m_keyboard = std::make_unique<Keyboard>();
     m_mouse = std::make_unique<Mouse>();
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
     m_deviceResources->SetWindow(window);
 #else
     m_deviceResources->SetWindow(window, width, height);
@@ -255,7 +257,7 @@ void Game::Update(DX::StepTimer const& timer)
 
             if (gpad.IsViewPressed())
             {
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
                 EnumerateModelFiles();
 #else
                 PostMessage(m_deviceResources->GetWindow(), WM_USER, 0, 0);
@@ -313,7 +315,7 @@ void Game::Update(DX::StepTimer const& timer)
             // TODO - m_ibl
         }
     }
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef PC
     else
     {
         m_usingGamepad = false;
@@ -680,7 +682,7 @@ void Game::Render()
                     mode = L"Wireframe";
 
                 const wchar_t* toneMap = L"*UNKNOWN*";
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
                 switch (m_toneMapMode)
                 {
                 case ToneMapPostProcess::Saturate: toneMap = (g_HDRMode) ? L"HDR10 (GameDVR: None)" : L"None"; break;
@@ -719,7 +721,7 @@ void Game::Render()
 
                 float spacing = m_fontConsolas->GetLineSpacing();
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
                 RECT rct = Viewport::ComputeTitleSafeArea(size.right, size.bottom);
 
                 m_fontConsolas->DrawString(m_spriteBatch.get(), m_szStatus, XMFLOAT2(float(rct.left), float(rct.top)), m_uiColor);
@@ -750,7 +752,7 @@ void Game::Render()
 
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"ToneMap");
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
     D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptors[2] = { m_deviceResources->GetRenderTargetView(), m_deviceResources->GetGameDVRRenderTargetView() };
     commandList->OMSetRenderTargets(2, rtvDescriptors, FALSE, nullptr);
 
@@ -843,7 +845,7 @@ void Game::OnResuming()
     m_gamepadButtonTracker.Reset();
 }
 
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef PC
 void Game::OnWindowMoved()
 {
     auto r = m_deviceResources->GetOutputSize();
@@ -901,7 +903,7 @@ void Game::CreateDeviceDependentResources()
 
     RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), DXGI_FORMAT_UNKNOWN);
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
     rtState.numRenderTargets = 2;
     rtState.rtvFormats[1] = m_deviceResources->GetGameDVRFormat();
 
@@ -918,7 +920,7 @@ void Game::CreateDeviceDependentResources()
     m_toneMapReinhard->SetHDRSourceTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SceneTex));
     m_toneMapACESFilmic->SetHDRSourceTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SceneTex));
 
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef PC
     m_toneMapLinear = std::make_unique<ToneMapPostProcess>(device, rtState, ToneMapPostProcess::None, ToneMapPostProcess::Linear);
     m_toneMapLinear->SetHDRSourceTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SceneTex));
 
@@ -968,7 +970,7 @@ void Game::CreateDeviceDependentResources()
         wchar_t radiance[_MAX_PATH] = {};
         wchar_t irradiance[_MAX_PATH] = {};
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
         wcscpy_s(radiance, s_radianceIBL[j]);
         wcscpy_s(irradiance, s_irradianceIBL[j]);
 #else
@@ -1009,7 +1011,7 @@ void Game::CreateWindowSizeDependentResources()
     wchar_t consolasFont[_MAX_PATH] = {};
     wchar_t comicFont[_MAX_PATH] = {};
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
     wcscpy_s(consolasFont, (size.bottom > 1080) ? L"consolas4k.spritefont" : L"consolas.spritefont");
     wcscpy_s(comicFont, (size.bottom > 1080) ? L"comic4k.spritefont" : L"comic.spritefont");
 #else
@@ -1042,7 +1044,7 @@ void Game::CreateWindowSizeDependentResources()
     CreateProjection();
 }
 
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef LOSTDEVICE
 void Game::OnDeviceLost()
 {
     m_spriteBatch.reset();
@@ -1066,7 +1068,7 @@ void Game::OnDeviceLost()
     m_toneMapReinhard.reset();
     m_toneMapACESFilmic.reset();
 
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef PC
     m_toneMapLinear.reset();
     m_toneMapHDR10.reset();
 #endif
@@ -1156,8 +1158,6 @@ void Game::LoadModel()
 
     if (m_model)
     {
-        auto device = m_deviceResources->GetD3DDevice();
-
         ResourceUploadBatch resourceUpload(device);
 
         resourceUpload.Begin();
@@ -1464,7 +1464,7 @@ void Game::CycleBackgroundColor()
 
 void Game::CycleToneMapOperator()
 {
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
+#ifdef PC
     if (m_deviceResources->GetColorSpace() != DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709)
         return;
 #endif
@@ -1499,7 +1499,7 @@ void Game::RotateView(Quaternion& q)
     // TODO -
 }
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
+#ifdef XBOX
 void Game::EnumerateModelFiles()
 {
     m_selectFile = m_firstFile = 0;
