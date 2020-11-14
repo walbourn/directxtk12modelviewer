@@ -29,6 +29,8 @@ namespace
     const XMVECTORF32 c_CornflowerBlue = { 0.127438f, 0.300544f, 0.846873f, 1.f };
 }
 
+bool Game::s_render4k = false;
+
 Game::Game() noexcept(false) :
     m_gridScale(10.f),
     m_fov(XM_PI / 4.f),
@@ -52,8 +54,16 @@ Game::Game() noexcept(false) :
     m_firstFile(0)
 {
 #ifdef XBOX
+
+    unsigned int flags = DX::DeviceResources::c_EnableHDR;
+
+    if (s_render4k)
+    {
+        flags |= DX::DeviceResources::c_Enable4K_UHD;
+    }
+
     m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM, DXGI_FORMAT_D32_FLOAT, 2,
-        DX::DeviceResources::c_EnableHDR);
+        flags);
 #else
     m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM, DXGI_FORMAT_D32_FLOAT, 2,
         D3D_FEATURE_LEVEL_11_0, DX::DeviceResources::c_EnableHDR);

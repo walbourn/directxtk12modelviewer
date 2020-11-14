@@ -41,6 +41,8 @@ Ensure ``DirectXTKModelViewer_*`` is the "StartUp Project"
 
 Build and Run (F5) or use Deploy Solution
 
+> For GDK, you can use the -render4K command-line option.
+
 ## Usage
 ### PC
 

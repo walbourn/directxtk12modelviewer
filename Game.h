@@ -77,6 +77,8 @@ public:
     void GetDefaultSize( int& width, int& height ) const noexcept;
     bool RequestHDRMode() const noexcept { return m_deviceResources ? (m_deviceResources->GetDeviceOptions() & DX::DeviceResources::c_EnableHDR) != 0 : false; }
 
+    static void SetRender4K() noexcept { s_render4k = true;  }
+
 private:
 
     void Update(DX::StepTimer const& timer);
@@ -217,4 +219,6 @@ private:
     int                                             m_selectFile;
     int                                             m_firstFile;
     std::vector<std::wstring>                       m_fileNames;
+
+    static bool                                     s_render4k;
 };

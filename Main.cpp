@@ -177,12 +177,14 @@ namespace
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
+#ifdef PC
 // Indicates to hybrid graphics systems to prefer the discrete part by default
 extern "C"
 {
     __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
     __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
+#endif
 
 // Entry point
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
@@ -203,6 +205,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     PAPPSTATE_REGISTRATION hPLM = {};
     PAPPCONSTRAIN_REGISTRATION hPLM2 = {};
+
+    if (wcsstr(lpCmdLine, L"-render4k") != nullptr)
+    {
+        Game::SetRender4K();
+    }
 #endif
 
     g_game = std::make_unique<Game>();
