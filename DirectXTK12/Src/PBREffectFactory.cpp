@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: PBREffectFactory.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -26,11 +26,12 @@ class PBREffectFactory::Impl
 {
 public:
     Impl(_In_ ID3D12Device* device, _In_ ID3D12DescriptorHeap* textureDescriptors, _In_ ID3D12DescriptorHeap* samplerDescriptors) noexcept(false)
-        : mTextureDescriptors(nullptr)
+        : mSharing(true)
+        , mEnableInstancing(false)
+        , mTextureDescriptors(nullptr)
         , mSamplerDescriptors(nullptr)
         , mDevice(device)
-        , mSharing(true)
-    { 
+    {
         if (textureDescriptors)
             mTextureDescriptors = std::make_unique<DescriptorHeap>(textureDescriptors);
         if (samplerDescriptors)
@@ -46,7 +47,9 @@ public:
         int samplerDescriptorOffset);
 
     void ReleaseCache();
-    void SetSharing(bool enabled) noexcept { mSharing = enabled; }
+
+    bool mSharing;
+    bool mEnableInstancing;
 
     std::unique_ptr<DescriptorHeap> mTextureDescriptors;
     std::unique_ptr<DescriptorHeap> mSamplerDescriptors;
@@ -57,8 +60,6 @@ private:
     using EffectCache = std::map< std::wstring, std::shared_ptr<IEffect> >;
 
     EffectCache  mEffectCache;
-
-    bool mSharing;
 
     std::mutex mutex;
 };
@@ -75,15 +76,15 @@ std::shared_ptr<IEffect> PBREffectFactory::Impl::CreateEffect(
     if (!mTextureDescriptors)
     {
         DebugTrace("ERROR: PBREffectFactory created without texture descriptor heap!\n");
-        throw std::exception("PBREffectFactory");
+        throw std::logic_error("PBREffectFactory");
     }
     if (!mSamplerDescriptors)
     {
         DebugTrace("ERROR: PBREffectFactory created without sampler descriptor heap!\n");
-        throw std::exception("PBREffectFactory");
+        throw std::logic_error("PBREffectFactory");
     }
 
-    int albetoTextureIndex = (info.diffuseTextureIndex != -1) ? info.diffuseTextureIndex + textureDescriptorOffset : -1;
+    int albedoTextureIndex = (info.diffuseTextureIndex != -1) ? info.diffuseTextureIndex + textureDescriptorOffset : -1;
     int rmaTextureIndex = (info.specularTextureIndex != -1) ? info.specularTextureIndex + textureDescriptorOffset : -1;
     int normalTextureIndex = (info.normalTextureIndex != -1) ? info.normalTextureIndex + textureDescriptorOffset : -1;
     int emissiveTextureIndex = (info.emissiveTextureIndex != -1) ? info.emissiveTextureIndex + textureDescriptorOffset : -1;
@@ -106,6 +107,11 @@ std::shared_ptr<IEffect> PBREffectFactory::Impl::CreateEffect(
         effectflags |= EffectFlags::Emissive;
     }
 
+    if (mEnableInstancing)
+    {
+        effectflags |= EffectFlags::Instancing;
+    }
+
     std::wstring cacheName;
     if (mSharing && !info.name.empty())
     {
@@ -126,7 +132,7 @@ std::shared_ptr<IEffect> PBREffectFactory::Impl::CreateEffect(
     effect->SetAlpha(info.alphaValue);
 
     effect->SetSurfaceTextures(
-        mTextureDescriptors->GetGpuHandle(static_cast<size_t>(albetoTextureIndex)),
+        mTextureDescriptors->GetGpuHandle(static_cast<size_t>(albedoTextureIndex)),
         mTextureDescriptors->GetGpuHandle(static_cast<size_t>(normalTextureIndex)),
         mTextureDescriptors->GetGpuHandle(static_cast<size_t>(rmaTextureIndex)),
         mSamplerDescriptors->GetGpuHandle(static_cast<size_t>(samplerIndex)));
@@ -167,20 +173,20 @@ PBREffectFactory::PBREffectFactory(_In_ ID3D12DescriptorHeap* textureDescriptors
 {
     if (!textureDescriptors)
     {
-        throw std::exception("Texture descriptor heap cannot be null if no device is provided. Use the alternative PBREffectFactory constructor instead.");
+        throw std::invalid_argument("Texture descriptor heap cannot be null if no device is provided. Use the alternative PBREffectFactory constructor instead.");
     }
     if (!samplerDescriptors)
     {
-        throw std::exception("Descriptor heap cannot be null if no device is provided. Use the alternative PBREffectFactory constructor instead.");
+        throw std::invalid_argument("Descriptor heap cannot be null if no device is provided. Use the alternative PBREffectFactory constructor instead.");
     }
 
     if (textureDescriptors->GetDesc().Type != D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
     {
-        throw std::exception("PBREffectFactory::CreateEffect requires a CBV_SRV_UAV descriptor heap for textureDescriptors.");
+        throw std::invalid_argument("PBREffectFactory::CreateEffect requires a CBV_SRV_UAV descriptor heap for textureDescriptors.");
     }
     if (samplerDescriptors->GetDesc().Type != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
     {
-        throw std::exception("PBREffectFactory::CreateEffect requires a SAMPLER descriptor heap for samplerDescriptors.");
+        throw std::invalid_argument("PBREffectFactory::CreateEffect requires a SAMPLER descriptor heap for samplerDescriptors.");
     }
 
     ComPtr<ID3D12Device> device;
@@ -197,21 +203,11 @@ PBREffectFactory::PBREffectFactory(_In_ ID3D12DescriptorHeap* textureDescriptors
     pImpl = std::make_shared<Impl>(device.Get(), textureDescriptors, samplerDescriptors);
 }
 
-PBREffectFactory::~PBREffectFactory()
-{
-}
 
+PBREffectFactory::PBREffectFactory(PBREffectFactory&&) noexcept = default;
+PBREffectFactory& PBREffectFactory::operator= (PBREffectFactory&&) noexcept = default;
+PBREffectFactory::~PBREffectFactory() = default;
 
-PBREffectFactory::PBREffectFactory(PBREffectFactory&& moveFrom) noexcept
-    : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-PBREffectFactory& PBREffectFactory::operator= (PBREffectFactory&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
 
 std::shared_ptr<IEffect> PBREffectFactory::CreateEffect(
     const EffectInfo& info, 
@@ -224,12 +220,20 @@ std::shared_ptr<IEffect> PBREffectFactory::CreateEffect(
     return pImpl->CreateEffect(info, opaquePipelineState, alphaPipelineState, inputLayout, textureDescriptorOffset, samplerDescriptorOffset);
 }
 
+
 void PBREffectFactory::ReleaseCache()
 {
     pImpl->ReleaseCache();
 }
 
+
+// Properties.
 void PBREffectFactory::SetSharing(bool enabled) noexcept
 {
-    pImpl->SetSharing(enabled);
+    pImpl->mSharing = enabled;
+}
+
+void PBREffectFactory::EnableInstancing(bool enabled) noexcept
+{
+    pImpl->mEnableInstancing = enabled;
 }

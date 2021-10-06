@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: AlphaTestEffect.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -62,7 +62,7 @@ public:
     D3D12_GPU_DESCRIPTOR_HANDLE texture;
     D3D12_GPU_DESCRIPTOR_HANDLE textureSampler;
     
-    int GetPipelineStatePermutation(bool vertexColorEnabled) const noexcept;
+    int GetPipelineStatePermutation(uint32_t effectFlags) const noexcept;
 
     void Apply(_In_ ID3D12GraphicsCommandList* commandList);
 };
@@ -181,10 +181,10 @@ AlphaTestEffect::Impl::Impl(
         texture{},
         textureSampler{}
 {
-    static_assert(_countof(EffectBase<AlphaTestEffectTraits>::VertexShaderIndices) == AlphaTestEffectTraits::ShaderPermutationCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<AlphaTestEffectTraits>::VertexShaderBytecode) == AlphaTestEffectTraits::VertexShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<AlphaTestEffectTraits>::PixelShaderBytecode) == AlphaTestEffectTraits::PixelShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<AlphaTestEffectTraits>::PixelShaderIndices) == AlphaTestEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<AlphaTestEffectTraits>::VertexShaderIndices)) == AlphaTestEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<AlphaTestEffectTraits>::VertexShaderBytecode)) == AlphaTestEffectTraits::VertexShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<AlphaTestEffectTraits>::PixelShaderBytecode)) == AlphaTestEffectTraits::PixelShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<AlphaTestEffectTraits>::PixelShaderIndices)) == AlphaTestEffectTraits::ShaderPermutationCount, "array/max mismatch");
 
     // Create root signature.
     {
@@ -203,7 +203,7 @@ AlphaTestEffect::Impl::Impl(
         rootParameters[RootParameterIndex::ConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 
         CD3DX12_ROOT_SIGNATURE_DESC rsigDesc = {};
-        rsigDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+        rsigDesc.Init(static_cast<UINT>(std::size(rootParameters)), rootParameters, 0, nullptr, rootSignatureFlags);
 
         mRootSignature = GetRootSignature(0, rsigDesc);
     }
@@ -215,17 +215,21 @@ AlphaTestEffect::Impl::Impl(
     if (effectFlags & EffectFlags::PerPixelLightingBit)
     {
         DebugTrace("ERROR: AlphaTestEffect does not implement EffectFlags::PerPixelLighting\n");
-        throw std::invalid_argument("AlphaTestEffect");
+        throw std::invalid_argument("PerPixelLighting effect flag is invalid");
     }
     else if (effectFlags & EffectFlags::Lighting)
     {
-        DebugTrace("ERROR: DualTextureEffect does not implement EffectFlags::Lighting\n");
-        throw std::invalid_argument("AlphaTestEffect");
+        DebugTrace("ERROR: AlphaTestEffect does not implement EffectFlags::Lighting\n");
+        throw std::invalid_argument("Lighting effect flag is invalid");
+    }
+    else if (effectFlags & EffectFlags::Instancing)
+    {
+        DebugTrace("ERROR: AlphaTestEffect does not implement EffectFlags::Instancing\n");
+        throw std::invalid_argument("Instancing effect flag is invalid");
     }
 
     // Create pipeline state.
-    int sp = GetPipelineStatePermutation(
-        (effectFlags & EffectFlags::VertexColor) != 0);
+    int sp = GetPipelineStatePermutation(effectFlags);
     assert(sp >= 0 && sp < AlphaTestEffectTraits::ShaderPermutationCount);
     _Analysis_assume_(sp >= 0 && sp < AlphaTestEffectTraits::ShaderPermutationCount);
 
@@ -247,7 +251,7 @@ AlphaTestEffect::Impl::Impl(
 }
 
 
-int AlphaTestEffect::Impl::GetPipelineStatePermutation(bool vertexColorEnabled) const noexcept
+int AlphaTestEffect::Impl::GetPipelineStatePermutation(uint32_t effectFlags) const noexcept
 {
     int permutation = 0;
 
@@ -258,7 +262,7 @@ int AlphaTestEffect::Impl::GetPipelineStatePermutation(bool vertexColorEnabled) 
     }
 
     // Support vertex coloring?
-    if (vertexColorEnabled)
+    if (effectFlags & EffectFlags::VertexColor)
     {
         permutation += 2;
     }
@@ -353,7 +357,7 @@ void AlphaTestEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
                 break;
 
             default:
-                throw std::exception("Unknown alpha test function");
+                throw std::runtime_error("Unknown alpha test function");
         }
 
         // x = compareTo, y = threshold, zw = resultSelector.
@@ -370,7 +374,7 @@ void AlphaTestEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
     if (!texture.ptr || !textureSampler.ptr)
     {
         DebugTrace("ERROR: Missing texture or sampler for AlphaTestEffect (texture %llu, sampler %llu)\n", texture.ptr, textureSampler.ptr);
-        throw std::exception("AlphaTestEffect");
+        throw std::runtime_error("AlphaTestEffect");
     }
 
     // **NOTE** If D3D asserts or crashes here, you probably need to call commandList->SetDescriptorHeaps() with the required descriptor heaps.
@@ -395,25 +399,9 @@ AlphaTestEffect::AlphaTestEffect(
 }
 
 
-// Move constructor.
-AlphaTestEffect::AlphaTestEffect(AlphaTestEffect&& moveFrom) noexcept
-    : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-AlphaTestEffect& AlphaTestEffect::operator= (AlphaTestEffect&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-AlphaTestEffect::~AlphaTestEffect()
-{
-}
+AlphaTestEffect::AlphaTestEffect(AlphaTestEffect&&) noexcept = default;
+AlphaTestEffect& AlphaTestEffect::operator= (AlphaTestEffect&&) noexcept = default;
+AlphaTestEffect::~AlphaTestEffect() = default;
 
 
 // IEffect methods

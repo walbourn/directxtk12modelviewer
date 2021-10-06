@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: DualTextureEffect.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -62,7 +62,7 @@ public:
     D3D12_GPU_DESCRIPTOR_HANDLE texture2;
     D3D12_GPU_DESCRIPTOR_HANDLE texture2Sampler;
 
-    int GetPipelineStatePermutation(bool vertexColorEnabled) const noexcept;
+    int GetPipelineStatePermutation(uint32_t effectFlags) const noexcept;
 
     void Apply(_In_ ID3D12GraphicsCommandList* commandList);
 };
@@ -163,10 +163,10 @@ DualTextureEffect::Impl::Impl(
         texture2{},
         texture2Sampler{}
 {
-    static_assert(_countof(EffectBase<DualTextureEffectTraits>::VertexShaderIndices) == DualTextureEffectTraits::ShaderPermutationCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<DualTextureEffectTraits>::VertexShaderBytecode) == DualTextureEffectTraits::VertexShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<DualTextureEffectTraits>::PixelShaderBytecode) == DualTextureEffectTraits::PixelShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<DualTextureEffectTraits>::PixelShaderIndices) == DualTextureEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<DualTextureEffectTraits>::VertexShaderIndices)) == DualTextureEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<DualTextureEffectTraits>::VertexShaderBytecode)) == DualTextureEffectTraits::VertexShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<DualTextureEffectTraits>::PixelShaderBytecode)) == DualTextureEffectTraits::PixelShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<DualTextureEffectTraits>::PixelShaderIndices)) == DualTextureEffectTraits::ShaderPermutationCount, "array/max mismatch");
 
     // Create root signature.
     {
@@ -193,7 +193,7 @@ DualTextureEffect::Impl::Impl(
 
         // Create the root signature
         CD3DX12_ROOT_SIGNATURE_DESC rsigDesc = {};
-        rsigDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+        rsigDesc.Init(static_cast<UINT>(std::size(rootParameters)), rootParameters, 0, nullptr, rootSignatureFlags);
 
         mRootSignature = GetRootSignature(0, rsigDesc);
     }
@@ -206,17 +206,21 @@ DualTextureEffect::Impl::Impl(
     if (effectFlags & EffectFlags::PerPixelLightingBit)
     {
         DebugTrace("ERROR: DualTextureEffect does not implement EffectFlags::PerPixelLighting\n");
-        throw std::invalid_argument("DualTextureEffect");
+        throw std::invalid_argument("PerPixelLighting effect flag is invalid");
     }
     else if (effectFlags & EffectFlags::Lighting)
     {
         DebugTrace("ERROR: DualTextureEffect does not implement EffectFlags::Lighting\n");
-        throw std::invalid_argument("DualTextureEffect");
+        throw std::invalid_argument("Lighting effect flag is invalid");
+    }
+    else if (effectFlags & EffectFlags::Instancing)
+    {
+        DebugTrace("ERROR: DualTextureEffect does not implement EffectFlags::Instancing\n");
+        throw std::invalid_argument("Instancing effect flag is invalid");
     }
 
     // Create pipeline state.
-    int sp = GetPipelineStatePermutation(
-        (effectFlags & EffectFlags::VertexColor) != 0);
+    int sp = GetPipelineStatePermutation(effectFlags);
     assert(sp >= 0 && sp < DualTextureEffectTraits::ShaderPermutationCount);
     _Analysis_assume_(sp >= 0 && sp < DualTextureEffectTraits::ShaderPermutationCount);
 
@@ -238,7 +242,7 @@ DualTextureEffect::Impl::Impl(
 }
 
 
-int DualTextureEffect::Impl::GetPipelineStatePermutation(bool vertexColorEnabled) const noexcept
+int DualTextureEffect::Impl::GetPipelineStatePermutation(uint32_t effectFlags) const noexcept
 {
     int permutation = 0;
 
@@ -249,7 +253,7 @@ int DualTextureEffect::Impl::GetPipelineStatePermutation(bool vertexColorEnabled
     }
 
     // Support vertex coloring?
-    if (vertexColorEnabled)
+    if (effectFlags & EffectFlags::VertexColor)
     {
         permutation += 2;
     }
@@ -277,12 +281,12 @@ void DualTextureEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
     if (!texture1.ptr || !texture2.ptr)
     {
         DebugTrace("ERROR: Missing texture(s) for DualTextureEffect (texture1 %llu, texture2 %llu)\n", texture1.ptr, texture2.ptr);
-        throw std::exception("DualTextureEffect");
+        throw std::runtime_error("DualTextureEffect");
     }
     if (!texture1Sampler.ptr || !texture2Sampler.ptr)
     {
         DebugTrace("ERROR: Missing sampler(s) for DualTextureEffect (samplers1 %llu, samplers2 %llu)\n", texture2Sampler.ptr, texture2Sampler.ptr);
-        throw std::exception("DualTextureEffect");
+        throw std::runtime_error("DualTextureEffect");
     }
 
     // **NOTE** If D3D asserts or crashes here, you probably need to call commandList->SetDescriptorHeaps() with the required descriptor heaps.
@@ -309,25 +313,9 @@ DualTextureEffect::DualTextureEffect(
 }
 
 
-// Move constructor.
-DualTextureEffect::DualTextureEffect(DualTextureEffect&& moveFrom) noexcept
-    : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-DualTextureEffect& DualTextureEffect::operator= (DualTextureEffect&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-DualTextureEffect::~DualTextureEffect()
-{
-}
+DualTextureEffect::DualTextureEffect(DualTextureEffect&&) noexcept = default;
+DualTextureEffect& DualTextureEffect::operator= (DualTextureEffect&&) noexcept = default;
+DualTextureEffect::~DualTextureEffect() = default;
 
 
 // IEffect methods

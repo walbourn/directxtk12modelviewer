@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: SpriteFont.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -117,7 +117,7 @@ SpriteFont::Impl::Impl(
         if (reader->Read<uint8_t>() != *magic)
         {
             DebugTrace("ERROR: SpriteFont provided with an invalid .spritefont file\n");
-            throw std::exception("Not a MakeSpriteFont output binary");
+            throw std::runtime_error("Not a MakeSpriteFont output binary");
         }
     }
 
@@ -196,7 +196,7 @@ SpriteFont::Impl::Impl(
 {
     if (!std::is_sorted(iglyphs, iglyphs + glyphCount))
     {
-        throw std::exception("Glyphs must be in ascending codepoint order");
+        throw std::runtime_error("Glyphs must be in ascending codepoint order");
     }
 
     glyphsIndex.reserve(glyphs.size());
@@ -252,7 +252,7 @@ SpriteFont::Glyph const* SpriteFont::Impl::FindGlyph(wchar_t character) const
     }
 
     DebugTrace("ERROR: SpriteFont encountered a character not in the font (%u, %C), and no default glyph was provided\n", character, character);
-    throw std::exception("Character not in font");
+    throw std::runtime_error("Character not in font");
 }
 
 
@@ -392,7 +392,7 @@ const wchar_t* SpriteFont::Impl::ConvertUTF8(_In_z_ const char *text) noexcept(f
     if (!result)
     {
         DebugTrace("ERROR: MultiByteToWideChar failed with error %u.\n", GetLastError());
-        throw std::exception("MultiByteToWideChar");
+        throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "MultiByteToWideChar");
     }
 
     return utfBuffer.get();
@@ -427,26 +427,9 @@ SpriteFont::SpriteFont(D3D12_GPU_DESCRIPTOR_HANDLE texture, XMUINT2 textureSize,
 }
 
 
-// Move constructor.
-SpriteFont::SpriteFont(SpriteFont&& moveFrom) noexcept
-    : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-SpriteFont& SpriteFont::operator= (SpriteFont&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-SpriteFont::~SpriteFont()
-{
-}
-
+SpriteFont::SpriteFont(SpriteFont&&) noexcept = default;
+SpriteFont& SpriteFont::operator= (SpriteFont&&) noexcept = default;
+SpriteFont::~SpriteFont() = default;
 
 // Wide-character / UTF-16LE
 void XM_CALLCONV SpriteFont::DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ wchar_t const* text, XMFLOAT2 const& position, FXMVECTOR color, float rotation, XMFLOAT2 const& origin, float scale, SpriteEffects effects, float layerDepth) const

@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: ResourceUploadBatch.h
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -31,8 +31,9 @@ namespace DirectX
     {
     public:
         explicit ResourceUploadBatch(_In_ ID3D12Device* device) noexcept(false);
-        ResourceUploadBatch(ResourceUploadBatch&& moveFrom) noexcept;
-        ResourceUploadBatch& operator= (ResourceUploadBatch&& moveFrom) noexcept;
+
+        ResourceUploadBatch(ResourceUploadBatch&&) noexcept;
+        ResourceUploadBatch& operator= (ResourceUploadBatch&&) noexcept;
 
         ResourceUploadBatch(ResourceUploadBatch const&) = delete;
         ResourceUploadBatch& operator= (ResourceUploadBatch const&) = delete;

@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: ToneMapPostProcess.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -36,14 +36,39 @@ namespace
 #endif
 
     // Constant buffer layout. Must match the shader!
-    __declspec(align(16)) struct ToneMapConstants
+    XM_ALIGNED_STRUCT(16) ToneMapConstants
     {
         // linearExposure is .x
         // paperWhiteNits is .y
         XMVECTOR parameters;
+        XMVECTOR colorRotation[3];
     };
 
     static_assert((sizeof(ToneMapConstants) % 16) == 0, "CB size not padded correctly");
+
+    // HDTV to UHDTV (Rec.709 color primaries into Rec.2020)
+    constexpr float c_from709to2020[12] =
+    {
+          0.6274040f, 0.3292820f, 0.0433136f, 0.f,
+          0.0690970f, 0.9195400f, 0.0113612f, 0.f,
+          0.0163916f, 0.0880132f, 0.8955950f, 0.f,
+    };
+
+    // DCI-P3-D65 https://en.wikipedia.org/wiki/DCI-P3 to UHDTV (DCI-P3-D65 color primaries into Rec.2020)
+    constexpr float c_fromP3D65to2020[12] =
+    {
+           0.753845f,  0.198593f,  0.047562f, 0.f,
+          0.0457456f,  0.941777f, 0.0124772f, 0.f,
+        -0.00121055f, 0.0176041f,  0.983607f, 0.f,
+    };
+
+    // HDTV to DCI-P3-D65 (a.k.a. Display P3 or P3D65)
+    constexpr float c_from709toP3D65[12] =
+    {
+        0.822461969f, 0.1775380f,        0.f, 0.f,
+        0.033194199f, 0.9668058f,        0.f, 0.f,
+        0.017082631f, 0.0723974f, 0.9105199f, 0.f,
+    };
 }
 
 // Include the precompiled shader code.
@@ -146,7 +171,7 @@ namespace
 #endif
     };
 
-    static_assert(_countof(pixelShaders) == PixelShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(pixelShaders)) == PixelShaderCount, "array/max mismatch");
 
     const int pixelShaderIndices[] =
     {
@@ -189,7 +214,7 @@ namespace
 #endif
     };
 
-    static_assert(_countof(pixelShaderIndices) == ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(pixelShaderIndices)) == ShaderPermutationCount, "array/max mismatch");
 
     // Factory for lazily instantiating shared root signatures.
     class DeviceResources
@@ -276,10 +301,10 @@ ToneMapPostProcess::Impl::Impl(_In_ ID3D12Device* device, const RenderTargetStat
     mDeviceResources(deviceResourcesPool.DemandCreate(device))
 {
     if (op >= Operator_Max)
-        throw std::out_of_range("Tonemap operator not defined");
+        throw std::invalid_argument("Tonemap operator not defined");
 
     if (func > TransferFunction_Max)
-        throw std::out_of_range("Transfer function not defined");
+        throw std::invalid_argument("Transfer function not defined");
 
     // Create root signature.
     {
@@ -317,7 +342,7 @@ ToneMapPostProcess::Impl::Impl(_In_ ID3D12Device* device, const RenderTargetStat
         // Constant buffer
         rootParameters[RootParameterIndex::ConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
-        rsigDesc.Init(_countof(rootParameters), rootParameters, 1, &sampler, rootSignatureFlags);
+        rsigDesc.Init(static_cast<UINT>(std::size(rootParameters)), rootParameters, 1, &sampler, rootSignatureFlags);
 
         mRootSignature = mDeviceResources->GetRootSignature(rsigDesc);
     }
@@ -355,6 +380,8 @@ ToneMapPostProcess::Impl::Impl(_In_ ID3D12Device* device, const RenderTargetStat
         pixelShaders[shaderIndex],
         mPipelineState.GetAddressOf());
 
+    memcpy(constants.colorRotation, c_from709to2020, sizeof(c_from709to2020));
+
     SetDebugObjectName(mPipelineState.Get(), L"ToneMapPostProcess");
 }
 
@@ -369,7 +396,7 @@ void ToneMapPostProcess::Impl::Process(_In_ ID3D12GraphicsCommandList* commandLi
     if (!texture.ptr)
     {
         DebugTrace("ERROR: Missing texture for ToneMapPostProcess (texture %llu)\n", texture.ptr);
-        throw std::exception("ToneMapPostProcess");
+        throw std::runtime_error("ToneMapPostProcess");
     }
     commandList->SetGraphicsRootDescriptorTable(RootParameterIndex::TextureSRV, texture);
 
@@ -411,25 +438,9 @@ ToneMapPostProcess::ToneMapPostProcess(_In_ ID3D12Device* device, const RenderTa
 }
 
 
-// Move constructor.
-ToneMapPostProcess::ToneMapPostProcess(ToneMapPostProcess&& moveFrom) noexcept
-  : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-ToneMapPostProcess& ToneMapPostProcess::operator= (ToneMapPostProcess&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-ToneMapPostProcess::~ToneMapPostProcess()
-{
-}
+ToneMapPostProcess::ToneMapPostProcess(ToneMapPostProcess&&) noexcept = default;
+ToneMapPostProcess& ToneMapPostProcess::operator= (ToneMapPostProcess&&) noexcept = default;
+ToneMapPostProcess::~ToneMapPostProcess() = default;
 
 
 // IPostProcess methods.
@@ -443,6 +454,29 @@ void ToneMapPostProcess::Process(_In_ ID3D12GraphicsCommandList* commandList)
 void ToneMapPostProcess::SetHDRSourceTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvDescriptor)
 {
     pImpl->texture = srvDescriptor;
+}
+
+
+void ToneMapPostProcess::SetColorRotation(ColorPrimaryRotation value)
+{
+    switch (value)
+    {
+    case DCI_P3_D65_to_UHDTV:   memcpy(pImpl->constants.colorRotation, c_fromP3D65to2020, sizeof(c_fromP3D65to2020)); break;
+    case HDTV_to_DCI_P3_D65:    memcpy(pImpl->constants.colorRotation, c_from709toP3D65, sizeof(c_from709toP3D65)); break;
+    default:                    memcpy(pImpl->constants.colorRotation, c_from709to2020, sizeof(c_from709to2020)); break;
+    }
+
+    pImpl->SetDirtyFlag();
+}
+
+
+void ToneMapPostProcess::SetColorRotation(FXMMATRIX value)
+{
+    XMMATRIX transpose = XMMatrixTranspose(value);
+    pImpl->constants.colorRotation[0] = transpose.r[0];
+    pImpl->constants.colorRotation[1] = transpose.r[1];
+    pImpl->constants.colorRotation[2] = transpose.r[2];
+    pImpl->SetDirtyFlag();
 }
 
 

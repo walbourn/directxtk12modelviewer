@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: CommonStates.h
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -26,8 +26,9 @@ namespace DirectX
     {
     public:
         explicit CommonStates(_In_ ID3D12Device* device);
-        CommonStates(CommonStates&& moveFrom) noexcept;
-        CommonStates& operator = (CommonStates&& moveFrom) noexcept;
+
+        CommonStates(CommonStates&&) noexcept;
+        CommonStates& operator = (CommonStates&&) noexcept;
 
         CommonStates(const CommonStates&) = delete;
         CommonStates& operator = (const CommonStates&) = delete;

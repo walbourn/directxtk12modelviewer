@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: pch.h
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -92,6 +92,9 @@
 #define _WIN32_WINNT_WIN10 0x0A00
 #endif
 
+#define D3DX12_NO_STATE_OBJECT_HELPERS
+#define D3DX12_NO_CHECK_FEATURE_SUPPORT_CLASS
+
 #ifdef _GAMING_XBOX
 #include <gxdk.h>
 
@@ -100,10 +103,16 @@
 #endif
 
 #ifdef _GAMING_XBOX_SCARLETT
+#pragma warning(push)
+#pragma warning(disable: 5204 5249)
 #include <d3d12_xs.h>
+#pragma warning(pop)
 #include <d3dx12_xs.h>
 #else
+#pragma warning(push)
+#pragma warning(disable: 5204)
 #include <d3d12_x.h>
+#pragma warning(pop)
 #include <d3dx12_x.h>
 #endif
 #elif defined(_XBOX_ONE) && defined(_TITLE)
@@ -125,8 +134,14 @@
 #endif
 #endif
 
-#include <dxgi1_4.h>
+#ifdef USING_DIRECTX_HEADERS
+#include <directx/dxgiformat.h>
+#include <directx/d3d12.h>
+#else
 #include <d3d12.h>
+#endif
+
+#include <dxgi1_4.h>
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -134,8 +149,11 @@
 #pragma clang diagnostic ignored "-Wtautological-type-limit-compare"
 #endif
 
-#define D3DX12_NO_STATE_OBJECT_HELPERS
+#ifdef USING_DIRECTX_HEADERS
+#include <directx/d3dx12.h>
+#else
 #include "d3dx12.h"
+#endif
 #endif
 
 #ifdef __clang__
@@ -149,17 +167,15 @@
 #pragma warning(pop)
 #endif
 
-#define _XM_NO_XMVECTOR_OVERLOADS_
-
-#include <DirectXMath.h>
-#include <DirectXPackedVector.h>
-#include <DirectXCollision.h>
-
 #include <algorithm>
 #include <atomic>
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <cwchar>
 #include <exception>
 #include <initializer_list>
 #include <iterator>
@@ -167,9 +183,11 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -185,6 +203,16 @@
 #pragma warning(pop)
 
 #include <malloc.h>
+
+#define _XM_NO_XMVECTOR_OVERLOADS_
+
+#include <DirectXMath.h>
+#include <DirectXPackedVector.h>
+#include <DirectXCollision.h>
+
+#if (DIRECTX_MATH_VERSION < 315)
+#define XM_ALIGNED_STRUCT(x) __declspec(align(x)) struct
+#endif
 
 #pragma warning(push)
 #pragma warning(disable : 4467 5038 5204 5220)
@@ -203,7 +231,12 @@
 
 #include <xaudio2.h>
 #include <xaudio2fx.h>
+
+#pragma warning(push)
+#pragma warning(disable : 4619 4616 5246)
 #include <x3daudio.h>
+#pragma warning(pop)
+
 #include <xapofx.h>
 
 #if (defined(_XBOX_ONE) && defined(_TITLE)) || defined(_GAMING_XBOX)

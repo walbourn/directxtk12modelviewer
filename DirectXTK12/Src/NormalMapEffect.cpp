@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: NormalMapEffect.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -43,9 +43,9 @@ namespace
     {
         using ConstantBufferType = NormalMapEffectConstants;
 
-        static constexpr int VertexShaderCount = 8;
+        static constexpr int VertexShaderCount = 16;
         static constexpr int PixelShaderCount = 4;
-        static constexpr int ShaderPermutationCount = 16;
+        static constexpr int ShaderPermutationCount = 32;
         static constexpr int RootSignatureCount = 2;
     };
 }
@@ -95,6 +95,16 @@ namespace
     #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc"
     #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc"
 
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxInst.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcInst.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxNoSpecInst.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst.inc"
+
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxBnInst.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst.inc"
+    #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst.inc"
+
     #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTx.inc"
     #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTxNoFog.inc"
     #include "Shaders/Compiled/XboxGamingScarlettNormalMapEffect_PSNormalPixelLightingTxNoSpec.inc"
@@ -109,6 +119,16 @@ namespace
     #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcBn.inc"
     #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc"
     #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc"
+
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxInst.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcInst.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecInst.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst.inc"
+
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxBnInst.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst.inc"
+    #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst.inc"
 
     #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_PSNormalPixelLightingTx.inc"
     #include "Shaders/Compiled/XboxGamingXboxOneNormalMapEffect_PSNormalPixelLightingTxNoFog.inc"
@@ -125,6 +145,16 @@ namespace
     #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc"
     #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc"
 
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxInst.inc"
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxVcInst.inc"
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecInst.inc"
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst.inc"
+
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxBnInst.inc"
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc"
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst.inc"
+    #include "Shaders/Compiled/XboxOneNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst.inc"
+
     #include "Shaders/Compiled/XboxOneNormalMapEffect_PSNormalPixelLightingTx.inc"
     #include "Shaders/Compiled/XboxOneNormalMapEffect_PSNormalPixelLightingTxNoFog.inc"
     #include "Shaders/Compiled/XboxOneNormalMapEffect_PSNormalPixelLightingTxNoSpec.inc"
@@ -140,6 +170,16 @@ namespace
     #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc"
     #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc"
 
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxInst.inc"
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxVcInst.inc"
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxNoSpecInst.inc"
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst.inc"
+
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxBnInst.inc"
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc"
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst.inc"
+    #include "Shaders/Compiled/NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst.inc"
+
     #include "Shaders/Compiled/NormalMapEffect_PSNormalPixelLightingTx.inc"
     #include "Shaders/Compiled/NormalMapEffect_PSNormalPixelLightingTxNoFog.inc"
     #include "Shaders/Compiled/NormalMapEffect_PSNormalPixelLightingTxNoSpec.inc"
@@ -151,17 +191,29 @@ namespace
 template<>
 const D3D12_SHADER_BYTECODE EffectBase<NormalMapEffectTraits>::VertexShaderBytecode[] =
 {
-    { NormalMapEffect_VSNormalPixelLightingTx,           sizeof(NormalMapEffect_VSNormalPixelLightingTx)           },
-    { NormalMapEffect_VSNormalPixelLightingTxVc,         sizeof(NormalMapEffect_VSNormalPixelLightingTxVc)         },
+    { NormalMapEffect_VSNormalPixelLightingTx,               sizeof(NormalMapEffect_VSNormalPixelLightingTx)               },
+    { NormalMapEffect_VSNormalPixelLightingTxVc,             sizeof(NormalMapEffect_VSNormalPixelLightingTxVc)             },
 
-    { NormalMapEffect_VSNormalPixelLightingTxBn,         sizeof(NormalMapEffect_VSNormalPixelLightingTxBn)         },
-    { NormalMapEffect_VSNormalPixelLightingTxVcBn,       sizeof(NormalMapEffect_VSNormalPixelLightingTxVcBn)       },
+    { NormalMapEffect_VSNormalPixelLightingTxBn,             sizeof(NormalMapEffect_VSNormalPixelLightingTxBn)             },
+    { NormalMapEffect_VSNormalPixelLightingTxVcBn,           sizeof(NormalMapEffect_VSNormalPixelLightingTxVcBn)           },
 
-    { NormalMapEffect_VSNormalPixelLightingTxNoSpec,     sizeof(NormalMapEffect_VSNormalPixelLightingTxNoSpec)     },
-    { NormalMapEffect_VSNormalPixelLightingTxVcNoSpec,   sizeof(NormalMapEffect_VSNormalPixelLightingTxVcNoSpec)   },
+    { NormalMapEffect_VSNormalPixelLightingTxNoSpec,         sizeof(NormalMapEffect_VSNormalPixelLightingTxNoSpec)         },
+    { NormalMapEffect_VSNormalPixelLightingTxVcNoSpec,       sizeof(NormalMapEffect_VSNormalPixelLightingTxVcNoSpec)       },
 
-    { NormalMapEffect_VSNormalPixelLightingTxNoSpecBn,   sizeof(NormalMapEffect_VSNormalPixelLightingTxNoSpecBn)   },
-    { NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn, sizeof(NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn) },
+    { NormalMapEffect_VSNormalPixelLightingTxNoSpecBn,       sizeof(NormalMapEffect_VSNormalPixelLightingTxNoSpecBn)       },
+    { NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn,     sizeof(NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn)     },
+
+    { NormalMapEffect_VSNormalPixelLightingTxInst,           sizeof(NormalMapEffect_VSNormalPixelLightingTxInst)           },
+    { NormalMapEffect_VSNormalPixelLightingTxVcInst,         sizeof(NormalMapEffect_VSNormalPixelLightingTxVcInst)         },
+
+    { NormalMapEffect_VSNormalPixelLightingTxBnInst,         sizeof(NormalMapEffect_VSNormalPixelLightingTxBnInst)         },
+    { NormalMapEffect_VSNormalPixelLightingTxVcBnInst,       sizeof(NormalMapEffect_VSNormalPixelLightingTxVcBnInst)       },
+
+    { NormalMapEffect_VSNormalPixelLightingTxNoSpecInst,     sizeof(NormalMapEffect_VSNormalPixelLightingTxNoSpecInst)     },
+    { NormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst,   sizeof(NormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst)   },
+
+    { NormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst,   sizeof(NormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst)   },
+    { NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst, sizeof(NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst) },
 };
 
 
@@ -187,6 +239,26 @@ const int EffectBase<NormalMapEffectTraits>::VertexShaderIndices[] =
     6,     // pixel lighting (biased vertex normal) + texture, no fog or specular
     7,     // pixel lighting (biased vertex normal) + texture + vertex color, no specular
     7,     // pixel lighting (biased vertex normal) + texture + vertex color, no fog or specular
+
+    8,     // instancing + pixel lighting + texture
+    8,     // instancing + pixel lighting + texture, no fog
+    9,     // instancing + pixel lighting + texture + vertex color
+    9,     // instancing + pixel lighting + texture + vertex color, no fog
+
+    12,    // instancing + pixel lighting + texture, no specular
+    12,    // instancing + pixel lighting + texture, no fog or specular
+    13,    // instancing + pixel lighting + texture + vertex color, no specular
+    13,    // instancing + pixel lighting + texture + vertex color, no fog or specular
+
+    10,    // instancing + pixel lighting (biased vertex normal) + texture
+    10,    // instancing + pixel lighting (biased vertex normal) + texture, no fog
+    11,    // instancing + pixel lighting (biased vertex normal) + texture + vertex color
+    11,    // instancing + pixel lighting (biased vertex normal) + texture + vertex color, no fog
+
+    14,    // instancing + pixel lighting (biased vertex normal) + texture, no specular
+    14,    // instancing + pixel lighting (biased vertex normal) + texture, no fog or specular
+    15,    // instancing + pixel lighting (biased vertex normal) + texture + vertex color, no specular
+    15,    // instancing + pixel lighting (biased vertex normal) + texture + vertex color, no fog or specular
 };
 
 
@@ -203,25 +275,45 @@ const D3D12_SHADER_BYTECODE EffectBase<NormalMapEffectTraits>::PixelShaderByteco
 template<>
 const int EffectBase<NormalMapEffectTraits>::PixelShaderIndices[] =
 {
-    0,      // pixel lighting + texture
-    1,      // pixel lighting + texture, no fog
-    0,      // pixel lighting + texture + vertex color
-    1,      // pixel lighting + texture + vertex color, no fog
+    0,     // pixel lighting + texture
+    1,     // pixel lighting + texture, no fog
+    0,     // pixel lighting + texture + vertex color
+    1,     // pixel lighting + texture + vertex color, no fog
 
     2,     // pixel lighting + texture, no specular
     3,     // pixel lighting + texture, no fog or specular
     2,     // pixel lighting + texture + vertex color, no specular
     3,     // pixel lighting + texture + vertex color, no fog or specular
 
-    0,      // pixel lighting (biased vertex normal) + texture
-    1,      // pixel lighting (biased vertex normal) + texture, no fog
-    0,      // pixel lighting (biased vertex normal) + texture + vertex color
-    1,      // pixel lighting (biased vertex normal) + texture + vertex color, no fog
+    0,     // pixel lighting (biased vertex normal) + texture
+    1,     // pixel lighting (biased vertex normal) + texture, no fog
+    0,     // pixel lighting (biased vertex normal) + texture + vertex color
+    1,     // pixel lighting (biased vertex normal) + texture + vertex color, no fog
 
     2,     // pixel lighting (biased vertex normal) + texture, no specular
     3,     // pixel lighting (biased vertex normal) + texture, no fog or specular
     2,     // pixel lighting (biased vertex normal) + texture + vertex color, no specular
     3,     // pixel lighting (biased vertex normal) + texture + vertex color, no fog or specular
+
+    0,     // instancing + pixel lighting + texture
+    1,     // instancing + pixel lighting + texture, no fog
+    0,     // instancing + pixel lighting + texture + vertex color
+    1,     // instancing + pixel lighting + texture + vertex color, no fog
+
+    2,     // instancing + pixel lighting + texture, no specular
+    3,     // instancing + pixel lighting + texture, no fog or specular
+    2,     // instancing + pixel lighting + texture + vertex color, no specular
+    3,     // instancing + pixel lighting + texture + vertex color, no fog or specular
+
+    0,     // instancing + pixel lighting (biased vertex normal) + texture
+    1,     // instancing + pixel lighting (biased vertex normal) + texture, no fog
+    0,     // instancing + pixel lighting (biased vertex normal) + texture + vertex color
+    1,     // instancing + pixel lighting (biased vertex normal) + texture + vertex color, no fog
+
+    2,     // instancing + pixel lighting (biased vertex normal) + texture, no specular
+    3,     // instancing + pixel lighting (biased vertex normal) + texture, no fog or specular
+    2,     // instancing + pixel lighting (biased vertex normal) + texture + vertex color, no specular
+    3,     // instancing + pixel lighting (biased vertex normal) + texture + vertex color, no fog or specular
 };
 
 // Global pool of per-device NormalMapEffect resources.
@@ -241,10 +333,10 @@ NormalMapEffect::Impl::Impl(
         normal{},
         sampler{}
 {
-    static_assert(_countof(EffectBase<NormalMapEffectTraits>::VertexShaderIndices) == NormalMapEffectTraits::ShaderPermutationCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<NormalMapEffectTraits>::VertexShaderBytecode) == NormalMapEffectTraits::VertexShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<NormalMapEffectTraits>::PixelShaderBytecode) == NormalMapEffectTraits::PixelShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<NormalMapEffectTraits>::PixelShaderIndices) == NormalMapEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<NormalMapEffectTraits>::VertexShaderIndices)) == NormalMapEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<NormalMapEffectTraits>::VertexShaderBytecode)) == NormalMapEffectTraits::VertexShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<NormalMapEffectTraits>::PixelShaderBytecode)) == NormalMapEffectTraits::PixelShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<NormalMapEffectTraits>::PixelShaderIndices)) == NormalMapEffectTraits::ShaderPermutationCount, "array/max mismatch");
 
     lights.InitializeConstants(constants.specularColorAndPower, constants.lightDirection, constants.lightDiffuseColor, constants.lightSpecularColor);
 
@@ -274,13 +366,13 @@ NormalMapEffect::Impl::Impl(
             CD3DX12_DESCRIPTOR_RANGE textureSRV3(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
             rootParameters[RootParameterIndex::TextureSpecularSRV].InitAsDescriptorTable(1, &textureSRV3, D3D12_SHADER_VISIBILITY_PIXEL);
 
-            rsigDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+            rsigDesc.Init(static_cast<UINT>(std::size(rootParameters)), rootParameters, 0, nullptr, rootSignatureFlags);
 
             mRootSignature = GetRootSignature(1, rsigDesc);
         }
         else
         {
-            rsigDesc.Init(_countof(rootParameters) - 1, rootParameters, 0, nullptr, rootSignatureFlags);
+            rsigDesc.Init(static_cast<UINT>(std::size(rootParameters) - 1), rootParameters, 0, nullptr, rootSignatureFlags);
 
             mRootSignature = GetRootSignature(0, rsigDesc);
         }
@@ -340,6 +432,12 @@ int NormalMapEffect::Impl::GetPipelineStatePermutation(uint32_t effectFlags) con
         permutation += 8;
     }
 
+    if (effectFlags & EffectFlags::Instancing)
+    {
+        // Vertex shader needs to use vertex matrix transform.
+        permutation += 16;
+    }
+
     return permutation;
 }
 
@@ -361,7 +459,7 @@ void NormalMapEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
     if (!texture.ptr || !sampler.ptr || !normal.ptr)
     {
         DebugTrace("ERROR: Missing texture(s) or sampler for NormalMapEffect (texture %llu, normal %llu, sampler %llu)\n", texture.ptr, normal.ptr, sampler.ptr);
-        throw std::exception("NormalMapEffect");
+        throw std::runtime_error("NormalMapEffect");
     }
 
     // **NOTE** If D3D asserts or crashes here, you probably need to call commandList->SetDescriptorHeaps() with the required descriptor heaps.
@@ -374,7 +472,7 @@ void NormalMapEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
         if (!specular.ptr)
         {
             DebugTrace("ERROR: Missing specular texure NormalMapEffect (texture %llu)\n", specular.ptr);
-            throw std::exception("NormalMapEffect");
+            throw std::runtime_error("NormalMapEffect");
         }
         commandList->SetGraphicsRootDescriptorTable(RootParameterIndex::TextureSpecularSRV, specular);
     }
@@ -397,25 +495,9 @@ NormalMapEffect::NormalMapEffect(
 }
 
 
-// Move constructor.
-NormalMapEffect::NormalMapEffect(NormalMapEffect&& moveFrom) noexcept
-    : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-NormalMapEffect& NormalMapEffect::operator= (NormalMapEffect&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-NormalMapEffect::~NormalMapEffect()
-{
-}
+NormalMapEffect::NormalMapEffect(NormalMapEffect&&) noexcept = default;
+NormalMapEffect& NormalMapEffect::operator= (NormalMapEffect&&) noexcept = default;
+NormalMapEffect::~NormalMapEffect() = default;
 
 
 // IEffect methods

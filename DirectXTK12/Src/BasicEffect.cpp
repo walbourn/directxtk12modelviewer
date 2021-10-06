@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: BasicEffect.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -72,7 +72,7 @@ public:
 
     EffectLights lights;
 
-    int GetPipelineStatePermutation(bool preferPerPixelLighting, bool vertexColorEnabled, bool biasedVertexNormals) const noexcept;
+    int GetPipelineStatePermutation(uint32_t effectFlags) const noexcept;
 
     void Apply(_In_ ID3D12GraphicsCommandList* commandList);
 };
@@ -418,10 +418,16 @@ BasicEffect::Impl::Impl(
         texture{},
         sampler{}
 {
-    static_assert(_countof(EffectBase<BasicEffectTraits>::VertexShaderIndices) == BasicEffectTraits::ShaderPermutationCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<BasicEffectTraits>::VertexShaderBytecode) == BasicEffectTraits::VertexShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<BasicEffectTraits>::PixelShaderBytecode) == BasicEffectTraits::PixelShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<BasicEffectTraits>::PixelShaderIndices) == BasicEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<BasicEffectTraits>::VertexShaderIndices)) == BasicEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<BasicEffectTraits>::VertexShaderBytecode)) == BasicEffectTraits::VertexShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<BasicEffectTraits>::PixelShaderBytecode)) == BasicEffectTraits::PixelShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<BasicEffectTraits>::PixelShaderIndices)) == BasicEffectTraits::ShaderPermutationCount, "array/max mismatch");
+
+    if (effectFlags & EffectFlags::Instancing)
+    {
+        DebugTrace("ERROR: BasicEffect does not implement EffectFlags::Instancing\n");
+        throw std::invalid_argument("Instancing effect flag is invalid");
+    }
 
     lights.InitializeConstants(constants.specularColorAndPower, constants.lightDirection, constants.lightDiffuseColor, constants.lightSpecularColor);
 
@@ -454,7 +460,7 @@ BasicEffect::Impl::Impl(
             rootParameters[RootParameterIndex::TextureSampler].InitAsDescriptorTable(1, &textureSampler, D3D12_SHADER_VISIBILITY_PIXEL);
 
             // use all parameters
-            rsigDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+            rsigDesc.Init(static_cast<UINT>(std::size(rootParameters)), rootParameters, 0, nullptr, rootSignatureFlags);
 
             mRootSignature = GetRootSignature(1, rsigDesc);
         }
@@ -470,10 +476,7 @@ BasicEffect::Impl::Impl(
     assert(mRootSignature != nullptr);
 
     // Create pipeline state.
-    int sp = GetPipelineStatePermutation(
-        (effectFlags & EffectFlags::PerPixelLightingBit) != 0,
-        (effectFlags & EffectFlags::VertexColor) != 0,
-        (effectFlags & EffectFlags::BiasedVertexNormals) != 0);
+    int sp = GetPipelineStatePermutation(effectFlags);
     assert(sp >= 0 && sp < BasicEffectTraits::ShaderPermutationCount);
     _Analysis_assume_(sp >= 0 && sp < BasicEffectTraits::ShaderPermutationCount);
 
@@ -495,7 +498,7 @@ BasicEffect::Impl::Impl(
 }
 
 
-int BasicEffect::Impl::GetPipelineStatePermutation(bool preferPerPixelLighting, bool vertexColorEnabled, bool biasedVertexNormals) const noexcept
+int BasicEffect::Impl::GetPipelineStatePermutation(uint32_t effectFlags) const noexcept
 {
     int permutation = 0;
 
@@ -506,7 +509,7 @@ int BasicEffect::Impl::GetPipelineStatePermutation(bool preferPerPixelLighting, 
     }
 
     // Support vertex coloring?
-    if (vertexColorEnabled)
+    if (effectFlags & EffectFlags::VertexColor)
     {
         permutation += 2;
     }
@@ -519,7 +522,7 @@ int BasicEffect::Impl::GetPipelineStatePermutation(bool preferPerPixelLighting, 
 
     if (lightingEnabled)
     {
-        if (preferPerPixelLighting)
+        if (effectFlags & EffectFlags::PerPixelLightingBit)
         {
             // Do lighting in the pixel shader.
             permutation += 16;
@@ -529,7 +532,7 @@ int BasicEffect::Impl::GetPipelineStatePermutation(bool preferPerPixelLighting, 
             permutation += 8;
         }
 
-        if (biasedVertexNormals)
+        if (effectFlags & EffectFlags::BiasedVertexNormals)
         {
             // Compressed normals need to be scaled and biased in the vertex shader.
             permutation += 16;
@@ -559,7 +562,7 @@ void BasicEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
         if (!texture.ptr || !sampler.ptr)
         {
             DebugTrace("ERROR: Missing texture or sampler for BasicEffect (texture %llu, sampler %llu)\n", texture.ptr, sampler.ptr);
-            throw std::exception("BasicEffect");
+            throw std::runtime_error("BasicEffect");
         }
 
         // **NOTE** If D3D asserts or crashes here, you probably need to call commandList->SetDescriptorHeaps() with the required descriptor heaps.
@@ -586,24 +589,9 @@ BasicEffect::BasicEffect(
 
 
 // Move constructor.
-BasicEffect::BasicEffect(BasicEffect&& moveFrom) noexcept
-  : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-BasicEffect& BasicEffect::operator= (BasicEffect&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-BasicEffect::~BasicEffect()
-{
-}
+BasicEffect::BasicEffect(BasicEffect&&) noexcept = default;
+BasicEffect& BasicEffect::operator= (BasicEffect&&) noexcept = default;
+BasicEffect::~BasicEffect() = default;
 
 
 // IEffect methods

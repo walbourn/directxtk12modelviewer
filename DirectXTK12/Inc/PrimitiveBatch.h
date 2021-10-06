@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: PrimitiveBatch.h
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -17,7 +17,9 @@
 #include <d3d12.h>
 #endif
 
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <utility>
 
@@ -32,8 +34,8 @@ namespace DirectX
         protected:
             PrimitiveBatchBase(_In_ ID3D12Device* device, size_t maxIndices, size_t maxVertices, size_t vertexSize);
 
-            PrimitiveBatchBase(PrimitiveBatchBase&& moveFrom) noexcept;
-            PrimitiveBatchBase& operator= (PrimitiveBatchBase&& moveFrom) noexcept;
+            PrimitiveBatchBase(PrimitiveBatchBase&&) noexcept;
+            PrimitiveBatchBase& operator= (PrimitiveBatchBase&&) noexcept;
 
             PrimitiveBatchBase(PrimitiveBatchBase const&) = delete;
             PrimitiveBatchBase& operator= (PrimitiveBatchBase const&) = delete;
@@ -65,19 +67,14 @@ namespace DirectX
         static const size_t DefaultBatchSize = 4096;
 
     public:
-        explicit PrimitiveBatch(_In_ ID3D12Device* device, size_t maxIndices = DefaultBatchSize * 3, size_t maxVertices = DefaultBatchSize)
+        explicit PrimitiveBatch(_In_ ID3D12Device* device,
+            size_t maxIndices = DefaultBatchSize * 3,
+            size_t maxVertices = DefaultBatchSize)
             : PrimitiveBatchBase(device, maxIndices, maxVertices, sizeof(TVertex))
         { }
 
-        PrimitiveBatch(PrimitiveBatch&& moveFrom) noexcept
-            : PrimitiveBatchBase(std::move(moveFrom))
-        { }
-
-        PrimitiveBatch& operator= (PrimitiveBatch&& moveFrom) noexcept
-        {
-            PrimitiveBatchBase::operator=(std::move(moveFrom));
-            return *this;
-        }
+        PrimitiveBatch(PrimitiveBatch&&) = default;
+        PrimitiveBatch& operator= (PrimitiveBatch&&) = default;
 
         PrimitiveBatch(PrimitiveBatch const&) = delete;
         PrimitiveBatch& operator= (PrimitiveBatch const&) = delete;

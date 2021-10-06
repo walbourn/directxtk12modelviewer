@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: Model.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -19,7 +19,7 @@
 
 using namespace DirectX;
 
-#ifndef _CPPRTTI 
+#if !defined(_CPPRTTI) && !defined(__GXX_RTTI)
 #error Model requires RTTI
 #endif
 
@@ -55,19 +55,19 @@ void ModelMeshPart::Draw(_In_ ID3D12GraphicsCommandList* commandList) const
     if (!indexBufferSize || !vertexBufferSize)
     {
         DebugTrace("ERROR: Model part missing values for vertex and/or index buffer size (indexBufferSize %u, vertexBufferSize %u)!\n", indexBufferSize, vertexBufferSize);
-        throw std::exception("ModelMeshPart");
+        throw std::runtime_error("ModelMeshPart");
     }
 
     if (!staticIndexBuffer && !indexBuffer)
     {
         DebugTrace("ERROR: Model part missing index buffer!\n");
-        throw std::exception("ModelMeshPart");
+        throw std::runtime_error("ModelMeshPart");
     }
 
     if (!staticVertexBuffer && !vertexBuffer)
     {
         DebugTrace("ERROR: Model part missing vertex buffer!\n");
-        throw std::exception("ModelMeshPart");
+        throw std::runtime_error("ModelMeshPart");
     }
 
     D3D12_VERTEX_BUFFER_VIEW vbv;
@@ -89,24 +89,27 @@ void ModelMeshPart::Draw(_In_ ID3D12GraphicsCommandList* commandList) const
 
 
 _Use_decl_annotations_
-void ModelMeshPart::DrawInstanced(_In_ ID3D12GraphicsCommandList* commandList, uint32_t instanceCount, uint32_t startInstanceLocation) const
+void ModelMeshPart::DrawInstanced(
+    ID3D12GraphicsCommandList* commandList,
+    uint32_t instanceCount,
+    uint32_t startInstance) const
 {
     if (!indexBufferSize || !vertexBufferSize)
     {
         DebugTrace("ERROR: Model part missing values for vertex and/or index buffer size (indexBufferSize %u, vertexBufferSize %u)!\n", indexBufferSize, vertexBufferSize);
-        throw std::exception("ModelMeshPart");
+        throw std::runtime_error("ModelMeshPart");
     }
 
     if (!staticIndexBuffer && !indexBuffer)
     {
         DebugTrace("ERROR: Model part missing index buffer!\n");
-        throw std::exception("ModelMeshPart");
+        throw std::runtime_error("ModelMeshPart");
     }
 
     if (!staticVertexBuffer && !vertexBuffer)
     {
         DebugTrace("ERROR: Model part missing vertex buffer!\n");
-        throw std::exception("ModelMeshPart");
+        throw std::runtime_error("ModelMeshPart");
     }
 
     D3D12_VERTEX_BUFFER_VIEW vbv;
@@ -123,16 +126,18 @@ void ModelMeshPart::DrawInstanced(_In_ ID3D12GraphicsCommandList* commandList, u
 
     commandList->IASetPrimitiveTopology(primitiveType);
 
-    commandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, vertexOffset, startInstanceLocation);
+    commandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, vertexOffset, startInstance);
 }
 
 
 _Use_decl_annotations_
-void ModelMeshPart::DrawMeshParts(ID3D12GraphicsCommandList* commandList, const ModelMeshPart::Collection& meshParts)
+void ModelMeshPart::DrawMeshParts(
+    ID3D12GraphicsCommandList* commandList,
+    const ModelMeshPart::Collection& meshParts)
 {
-    for (auto it = meshParts.cbegin(); it != meshParts.cend(); ++it)
+    for (const auto& it : meshParts)
     {
-        auto part = (*it).get();
+        auto part = it.get();
         assert(part != nullptr);
 
         part->Draw(commandList);
@@ -146,9 +151,9 @@ void ModelMeshPart::DrawMeshParts(
     const ModelMeshPart::Collection& meshParts,
     ModelMeshPart::DrawCallback callback)
 {
-    for (auto it = meshParts.cbegin(); it != meshParts.cend(); ++it)
+    for (const auto& it : meshParts)
     {
-        auto part = (*it).get();
+        auto part = it.get();
         assert(part != nullptr);
 
         callback(commandList, *part);
@@ -158,7 +163,8 @@ void ModelMeshPart::DrawMeshParts(
 
 
 _Use_decl_annotations_
-void ModelMeshPart::DrawMeshParts(ID3D12GraphicsCommandList* commandList,
+void ModelMeshPart::DrawMeshParts(
+    ID3D12GraphicsCommandList* commandList,
     const ModelMeshPart::Collection& meshParts,
     IEffect* effect)
 {
@@ -171,7 +177,8 @@ void ModelMeshPart::DrawMeshParts(ID3D12GraphicsCommandList* commandList,
 // ModelMesh
 //--------------------------------------------------------------------------------------
 
-ModelMesh::ModelMesh() noexcept
+ModelMesh::ModelMesh() noexcept :
+    boneIndex(ModelBone::c_Invalid)
 {
 }
 
@@ -219,17 +226,56 @@ void __cdecl ModelMesh::DrawAlpha(_In_ ID3D12GraphicsCommandList* commandList, M
 //--------------------------------------------------------------------------------------
 // Model
 //--------------------------------------------------------------------------------------
+
 Model::Model() noexcept
 {
 }
-
 
 Model::~Model()
 {
 }
 
+Model::Model(Model const& other) :
+    meshes(other.meshes),
+    materials(other.materials),
+    textureNames(other.textureNames),
+    bones(other.bones),
+    name(other.name)
+{
+    const size_t nbones = other.bones.size();
+    if (nbones > 0)
+    {
+        if (other.boneMatrices)
+        {
+            boneMatrices = ModelBone::MakeArray(nbones);
+            memcpy(boneMatrices.get(), other.boneMatrices.get(), sizeof(XMMATRIX) * nbones);
+        }
+        if (other.invBindPoseMatrices)
+        {
+            invBindPoseMatrices = ModelBone::MakeArray(nbones);
+            memcpy(invBindPoseMatrices.get(), other.invBindPoseMatrices.get(), sizeof(XMMATRIX) * nbones);
+        }
+    }
+}
 
-// Load texture resources
+Model& Model::operator= (Model const& rhs)
+{
+    if (this != &rhs)
+    {
+        Model tmp(rhs);
+        std::swap(meshes, tmp.meshes);
+        std::swap(materials, tmp.materials);
+        std::swap(textureNames, tmp.textureNames);
+        std::swap(bones, tmp.bones);
+        std::swap(boneMatrices, tmp.boneMatrices);
+        std::swap(invBindPoseMatrices, tmp.invBindPoseMatrices);
+        std::swap(name, tmp.name);
+    }
+    return *this;
+}
+
+
+// Load texture resources.
 int Model::LoadTextures(IEffectTextureFactory& texFactory, int destinationDescriptorOffset) const
 {
     for (size_t i = 0; i < textureNames.size(); ++i)
@@ -241,7 +287,7 @@ int Model::LoadTextures(IEffectTextureFactory& texFactory, int destinationDescri
 }
 
 
-// Load texture resources (helper function)
+// Load texture resources (helper function).
 _Use_decl_annotations_
 std::unique_ptr<EffectTextureFactory> Model::LoadTextures(
     ID3D12Device* device,
@@ -268,7 +314,7 @@ std::unique_ptr<EffectTextureFactory> Model::LoadTextures(
 }
 
 
-// Load VB/IB resources for static geometry
+// Load VB/IB resources for static geometry.
 _Use_decl_annotations_
 void Model::LoadStaticBuffers(
     ID3D12Device* device,
@@ -291,7 +337,7 @@ void Model::LoadStaticBuffers(
 
     CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
 
-    for(auto it = uniqueParts.cbegin(); it != uniqueParts.cend(); ++it)
+    for (auto it = uniqueParts.cbegin(); it != uniqueParts.cend(); ++it)
     {
         auto part = *it;
 
@@ -301,7 +347,7 @@ void Model::LoadStaticBuffers(
             if (!part->vertexBuffer)
             {
                 DebugTrace("ERROR: Model part missing vertex buffer!\n");
-                throw std::exception("ModelMeshPart");
+                throw std::runtime_error("ModelMeshPart");
             }
 
             part->vertexBufferSize = static_cast<uint32_t>(part->vertexBuffer.Size());
@@ -357,7 +403,7 @@ void Model::LoadStaticBuffers(
             if (!part->indexBuffer)
             {
                 DebugTrace("ERROR: Model part missing index buffer!\n");
-                throw std::exception("ModelMeshPart");
+                throw std::runtime_error("ModelMeshPart");
             }
 
             part->indexBufferSize = static_cast<uint32_t>(part->indexBuffer.Size());
@@ -410,8 +456,8 @@ void Model::LoadStaticBuffers(
 }
 
 
-// Create effects for each mesh piece
-std::vector<std::shared_ptr<IEffect>> Model::CreateEffects(
+// Create effects for each mesh piece.
+Model::EffectCollection Model::CreateEffects(
     IEffectFactory& fxFactory,
     const EffectPipelineStateDescription& opaquePipelineState,
     const EffectPipelineStateDescription& alphaPipelineState,
@@ -421,10 +467,10 @@ std::vector<std::shared_ptr<IEffect>> Model::CreateEffects(
     if (materials.empty())
     {
         DebugTrace("ERROR: Model has no material information to create effects!\n");
-        throw std::exception("CreateEffects");
+        throw std::runtime_error("CreateEffects");
     }
 
-    std::vector<std::shared_ptr<IEffect>> effects;
+    EffectCollection effects;
 
     // Count the number of parts
     uint32_t partCount = 0;
@@ -478,7 +524,8 @@ std::vector<std::shared_ptr<IEffect>> Model::CreateEffects(
     return effects;
 }
 
-// Creates an effect for a mesh part
+
+// Private helper for creating an effect for a mesh part.
 _Use_decl_annotations_
 std::shared_ptr<IEffect> Model::CreateEffectForMeshPart(
     IEffectFactory& fxFactory,
@@ -492,10 +539,10 @@ std::shared_ptr<IEffect> Model::CreateEffectForMeshPart(
     const auto& m = materials[part->materialIndex];
 
     if (!part->vbDecl || part->vbDecl->empty())
-        throw std::exception("Model mesh part missing vertex buffer input elements data");
+        throw std::runtime_error("Model mesh part missing vertex buffer input elements data");
 
     if (part->vbDecl->size() > D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT)
-        throw std::exception("Model mesh part input layout size is too large for DirectX 12");
+        throw std::runtime_error("Model mesh part input layout size is too large for DirectX 12");
 
     D3D12_INPUT_LAYOUT_DESC il = {};
     il.NumElements = static_cast<UINT>(part->vbDecl->size());
@@ -504,9 +551,10 @@ std::shared_ptr<IEffect> Model::CreateEffectForMeshPart(
     return fxFactory.CreateEffect(m, opaquePipelineState, alphaPipelineState, il, textureDescriptorOffset, samplerDescriptorOffset);
 }
 
-// Create effects for each mesh piece with the default factory
+
+// Create effects for each mesh piece with the default factory.
 _Use_decl_annotations_
-std::vector<std::shared_ptr<IEffect>> Model::CreateEffects(
+Model::EffectCollection Model::CreateEffects(
     const EffectPipelineStateDescription& opaquePipelineState,
     const EffectPipelineStateDescription& alphaPipelineState,
     ID3D12DescriptorHeap* textureDescriptorHeap,
@@ -518,24 +566,176 @@ std::vector<std::shared_ptr<IEffect>> Model::CreateEffects(
     return CreateEffects(fxFactory, opaquePipelineState, alphaPipelineState, textureDescriptorOffset, samplerDescriptorOffset);
 }
 
-// Updates effect matrices (if applicable)
-void XM_CALLCONV Model::UpdateEffectMatrices(
-    _In_ std::vector<std::shared_ptr<IEffect>>& effectList,
-    DirectX::FXMMATRIX world,
-    DirectX::CXMMATRIX view,
-    DirectX::CXMMATRIX proj)
+
+// Compute using bone hierarchy from model bone matrices to an array.
+_Use_decl_annotations_
+void Model::CopyAbsoluteBoneTransformsTo(
+    size_t nbones,
+    XMMATRIX* boneTransforms) const
 {
-    for (auto& fx : effectList)
+    if (!nbones || !boneTransforms)
     {
-        auto matFx = dynamic_cast<IEffectMatrices*>(fx.get());
-        if (matFx)
+        throw std::invalid_argument("Bone transforms array required");
+    }
+
+    if (nbones < bones.size())
+    {
+        throw std::invalid_argument("Bone transforms array is too small");
+    }
+
+    if (bones.empty() || !boneMatrices)
+    {
+        throw std::runtime_error("Model is missing bones");
+    }
+
+    memset(boneTransforms, 0, sizeof(XMMATRIX) * nbones);
+
+    XMMATRIX id = XMMatrixIdentity();
+    size_t visited = 0;
+    ComputeAbsolute(0, id, bones.size(), boneMatrices.get(), boneTransforms, visited);
+}
+
+
+// Compute using bone hierarchy from one array to another array.
+_Use_decl_annotations_
+void Model::CopyAbsoluteBoneTransforms(
+    size_t nbones,
+    const XMMATRIX* inBoneTransforms,
+    XMMATRIX* outBoneTransforms) const
+{
+    if (!nbones || !inBoneTransforms || !outBoneTransforms)
+    {
+        throw std::invalid_argument("Bone transforms arrays required");
+    }
+
+    if (nbones < bones.size())
+    {
+        throw std::invalid_argument("Bone transforms arrays are too small");
+    }
+
+    if (bones.empty())
+    {
+        throw std::runtime_error("Model is missing bones");
+    }
+
+    memset(outBoneTransforms, 0, sizeof(XMMATRIX) * nbones);
+
+    XMMATRIX id = XMMatrixIdentity();
+    size_t visited = 0;
+    ComputeAbsolute(0, id, bones.size(), inBoneTransforms, outBoneTransforms, visited);
+}
+
+
+// Private helper for computing hierarchical transforms using bones via recursion.
+_Use_decl_annotations_
+void Model::ComputeAbsolute(
+    uint32_t index,
+    FXMMATRIX parent,
+    size_t nbones,
+    const XMMATRIX* inBoneTransforms,
+    XMMATRIX* outBoneTransforms,
+    size_t& visited) const
+{
+    if (index == ModelBone::c_Invalid || index >= nbones)
+        return;
+
+    assert(inBoneTransforms != nullptr && outBoneTransforms != nullptr);
+
+    ++visited; // Cycle detection safety!
+    if (visited > bones.size())
+    {
+        DebugTrace("ERROR: Model::CopyAbsoluteBoneTransformsTo encountered a cycle in the bones!\n");
+        throw std::runtime_error("Model bones form an invalid graph");
+    }
+
+    XMMATRIX local = inBoneTransforms[index];
+    local = XMMatrixMultiply(local, parent);
+    outBoneTransforms[index] = local;
+
+    if (bones[index].siblingIndex != ModelBone::c_Invalid)
+    {
+        ComputeAbsolute(bones[index].siblingIndex, parent, nbones,
+            inBoneTransforms, outBoneTransforms, visited);
+    }
+
+    if (bones[index].childIndex != ModelBone::c_Invalid)
+    {
+        ComputeAbsolute(bones[index].childIndex, local, nbones,
+            inBoneTransforms, outBoneTransforms, visited);
+    }
+}
+
+
+// Copy the model bone matrices from an array.
+_Use_decl_annotations_
+void Model::CopyBoneTransformsFrom(size_t nbones, const XMMATRIX* boneTransforms)
+{
+    if (!nbones || !boneTransforms)
+    {
+        throw std::invalid_argument("Bone transforms array required");
+    }
+
+    if (nbones < bones.size())
+    {
+        throw std::invalid_argument("Bone transforms array is too small");
+    }
+
+    if (bones.empty())
+    {
+        throw std::runtime_error("Model is missing bones");
+    }
+
+    if (!boneMatrices)
+    {
+        boneMatrices = ModelBone::MakeArray(bones.size());
+    }
+
+    memcpy(boneMatrices.get(), boneTransforms, bones.size() * sizeof(XMMATRIX));
+}
+
+
+// Copy the model bone matrices to an array.
+_Use_decl_annotations_
+void Model::CopyBoneTransformsTo(size_t nbones, XMMATRIX* boneTransforms) const
+{
+    if (!nbones || !boneTransforms)
+    {
+        throw std::invalid_argument("Bone transforms array required");
+    }
+
+    if (nbones < bones.size())
+    {
+        throw std::invalid_argument("Bone transforms array is too small");
+    }
+
+    if (bones.empty())
+    {
+        throw std::runtime_error("Model is missing bones");
+    }
+
+    memcpy(boneTransforms, boneMatrices.get(), bones.size() * sizeof(XMMATRIX));
+}
+
+
+// Updates effect matrices (if applicable).
+void XM_CALLCONV Model::UpdateEffectMatrices(
+    EffectCollection& effects,
+    FXMMATRIX world,
+    CXMMATRIX view,
+    CXMMATRIX proj)
+{
+    for (auto& fx : effects)
+    {
+        auto imatrices = dynamic_cast<IEffectMatrices*>(fx.get());
+        if (imatrices)
         {
-            matFx->SetMatrices(world, view, proj);
+            imatrices->SetMatrices(world, view, proj);
         }
     }
 }
 
-// Transition static VB/IB resources (if applicable)
+
+// Transition static VB/IB resources (if applicable).
 void Model::Transition(
     _In_ ID3D12GraphicsCommandList* commandList,
     D3D12_RESOURCE_STATES stateBeforeVB,
@@ -550,8 +750,8 @@ void Model::Transition(
     {
         for (auto& pit : mit->opaqueMeshParts)
         {
-            assert(count < _countof(barrier));
-            _Analysis_assume_(count < _countof(barrier));
+            assert(count < std::size(barrier));
+            _Analysis_assume_(count < std::size(barrier));
 
             if (stateBeforeIB != stateAfterIB && pit->staticIndexBuffer)
             {
@@ -562,7 +762,7 @@ void Model::Transition(
                 barrier[count].Transition.StateAfter = stateAfterIB;
                 ++count;
 
-                if (count >= _countof(barrier))
+                if (count >= std::size(barrier))
                 {
                     commandList->ResourceBarrier(count, barrier);
                     count = 0;
@@ -578,7 +778,7 @@ void Model::Transition(
                 barrier[count].Transition.StateAfter = stateAfterVB;
                 ++count;
 
-                if (count >= _countof(barrier))
+                if (count >= std::size(barrier))
                 {
                     commandList->ResourceBarrier(count, barrier);
                     count = 0;
@@ -588,8 +788,8 @@ void Model::Transition(
 
         for (auto& pit : mit->alphaMeshParts)
         {
-            assert(count < _countof(barrier));
-            _Analysis_assume_(count < _countof(barrier));
+            assert(count < std::size(barrier));
+            _Analysis_assume_(count < std::size(barrier));
 
             if (stateBeforeIB != stateAfterIB && pit->staticIndexBuffer)
             {
@@ -600,7 +800,7 @@ void Model::Transition(
                 barrier[count].Transition.StateAfter = stateAfterIB;
                 ++count;
 
-                if (count >= _countof(barrier))
+                if (count >= std::size(barrier))
                 {
                     commandList->ResourceBarrier(count, barrier);
                     count = 0;
@@ -616,7 +816,7 @@ void Model::Transition(
                 barrier[count].Transition.StateAfter = stateAfterVB;
                 ++count;
 
-                if (count >= _countof(barrier))
+                if (count >= std::size(barrier))
                 {
                     commandList->ResourceBarrier(count, barrier);
                     count = 0;

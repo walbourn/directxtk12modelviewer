@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: SkinnedEffect.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -71,7 +71,7 @@ public:
 
     EffectLights lights;
 
-    int GetPipelineStatePermutation(bool preferPerPixelLighting, bool biasedVertexNormals) const noexcept;
+    int GetPipelineStatePermutation(uint32_t effectFlags) const noexcept;
 
     void Apply(_In_ ID3D12GraphicsCommandList* commandList);
 };
@@ -187,10 +187,10 @@ SkinnedEffect::Impl::Impl(
         texture{},
         sampler{}
 {
-    static_assert(_countof(EffectBase<SkinnedEffectTraits>::VertexShaderIndices) == SkinnedEffectTraits::ShaderPermutationCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<SkinnedEffectTraits>::VertexShaderBytecode) == SkinnedEffectTraits::VertexShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<SkinnedEffectTraits>::PixelShaderBytecode) == SkinnedEffectTraits::PixelShaderCount, "array/max mismatch");
-    static_assert(_countof(EffectBase<SkinnedEffectTraits>::PixelShaderIndices) == SkinnedEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<SkinnedEffectTraits>::VertexShaderIndices)) == SkinnedEffectTraits::ShaderPermutationCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<SkinnedEffectTraits>::VertexShaderBytecode)) == SkinnedEffectTraits::VertexShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<SkinnedEffectTraits>::PixelShaderBytecode)) == SkinnedEffectTraits::PixelShaderCount, "array/max mismatch");
+    static_assert(static_cast<int>(std::size(EffectBase<SkinnedEffectTraits>::PixelShaderIndices)) == SkinnedEffectTraits::ShaderPermutationCount, "array/max mismatch");
 
     lights.InitializeConstants(constants.specularColorAndPower, constants.lightDirection, constants.lightDiffuseColor, constants.lightSpecularColor);
 
@@ -218,7 +218,7 @@ SkinnedEffect::Impl::Impl(
         rootParameters[RootParameterIndex::ConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 
         CD3DX12_ROOT_SIGNATURE_DESC rsigDesc = {};
-        rsigDesc.Init(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+        rsigDesc.Init(static_cast<UINT>(std::size(rootParameters)), rootParameters, 0, nullptr, rootSignatureFlags);
 
         mRootSignature = GetRootSignature(0, rsigDesc);
     }
@@ -230,13 +230,16 @@ SkinnedEffect::Impl::Impl(
     if (effectFlags & EffectFlags::VertexColor)
     {
         DebugTrace("ERROR: SkinnedEffect does not implement EffectFlags::VertexColor\n");
-        throw std::invalid_argument("SkinnedEffect");
+        throw std::invalid_argument("VertexColor effect flag is invalid");
+    }
+    else if (effectFlags & EffectFlags::Instancing)
+    {
+        DebugTrace("ERROR: SkinnedEffect does not implement EffectFlags::Instancing\n");
+        throw std::invalid_argument("Instancing effect flag is invalid");
     }
 
     // Create pipeline state.
-    int sp = GetPipelineStatePermutation(
-        (effectFlags & EffectFlags::PerPixelLightingBit) != 0,
-        (effectFlags & EffectFlags::BiasedVertexNormals) != 0);
+    int sp = GetPipelineStatePermutation(effectFlags);
     assert(sp >= 0 && sp < SkinnedEffectTraits::ShaderPermutationCount);
     _Analysis_assume_(sp >= 0 && sp < SkinnedEffectTraits::ShaderPermutationCount);
 
@@ -258,7 +261,7 @@ SkinnedEffect::Impl::Impl(
 }
 
 
-int SkinnedEffect::Impl::GetPipelineStatePermutation(bool preferPerPixelLighting, bool biasedVertexNormals) const noexcept
+int SkinnedEffect::Impl::GetPipelineStatePermutation(uint32_t effectFlags) const noexcept
 {
     int permutation = 0;
 
@@ -268,13 +271,13 @@ int SkinnedEffect::Impl::GetPipelineStatePermutation(bool preferPerPixelLighting
         permutation += 1;
     }
 
-    if (preferPerPixelLighting)
+    if (effectFlags & EffectFlags::PerPixelLightingBit)
     {
         // Do lighting in the pixel shader.
         permutation += 2;
     }
 
-    if (biasedVertexNormals)
+    if (effectFlags & EffectFlags::BiasedVertexNormals)
     {
         // Compressed normals need to be scaled and biased in the vertex shader.
         permutation += 4;
@@ -301,7 +304,7 @@ void SkinnedEffect::Impl::Apply(_In_ ID3D12GraphicsCommandList* commandList)
     if (!texture.ptr || !sampler.ptr)
     {
         DebugTrace("ERROR: Missing texture or sampler for SkinnedEffect (texture %llu, sampler %llu)\n", texture.ptr, sampler.ptr);
-        throw std::exception("SkinnedEffect");
+        throw std::runtime_error("SkinnedEffect");
     }
 
     // **NOTE** If D3D asserts or crashes here, you probably need to call commandList->SetDescriptorHeaps() with the required descriptor heaps.
@@ -326,25 +329,9 @@ SkinnedEffect::SkinnedEffect(
 }
 
 
-// Move constructor.
-SkinnedEffect::SkinnedEffect(SkinnedEffect&& moveFrom) noexcept
-    : pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-
-// Move assignment.
-SkinnedEffect& SkinnedEffect::operator= (SkinnedEffect&& moveFrom) noexcept
-{
-    pImpl = std::move(moveFrom.pImpl);
-    return *this;
-}
-
-
-// Public destructor.
-SkinnedEffect::~SkinnedEffect()
-{
-}
+SkinnedEffect::SkinnedEffect(SkinnedEffect&&) noexcept = default;
+SkinnedEffect& SkinnedEffect::operator= (SkinnedEffect&&) noexcept = default;
+SkinnedEffect::~SkinnedEffect() = default;
 
 
 // IEffect methods.
@@ -532,17 +519,22 @@ void SkinnedEffect::SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvDescriptor, D3D12_
 void SkinnedEffect::SetBoneTransforms(_In_reads_(count) XMMATRIX const* value, size_t count)
 {
     if (count > MaxBones)
-        throw std::out_of_range("count parameter out of range");
+        throw std::invalid_argument("count parameter exceeds MaxBones");
 
     auto boneConstant = pImpl->constants.bones;
 
     for (size_t i = 0; i < count; i++)
     {
+#if DIRECTX_MATH_VERSION >= 313
+        XMStoreFloat3x4A(reinterpret_cast<XMFLOAT3X4A*>(&boneConstant[i]), value[i]);
+#else
+        // Xbox One XDK has an older version of DirectXMath
         XMMATRIX boneMatrix = XMMatrixTranspose(value[i]);
 
         boneConstant[i][0] = boneMatrix.r[0];
         boneConstant[i][1] = boneMatrix.r[1];
         boneConstant[i][2] = boneMatrix.r[2];
+#endif
     }
 
     pImpl->dirtyFlags |= EffectDirtyFlags::ConstantBuffer;

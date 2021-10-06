@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: GeometricPrimitive.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //
 // http://go.microsoft.com/fwlink/?LinkID=615561
@@ -40,7 +40,7 @@ public:
         D3D12_RESOURCE_STATES stateBeforeIB,
         D3D12_RESOURCE_STATES stateAfterIB);
 
-    void Draw(_In_ ID3D12GraphicsCommandList* commandList) const;
+    void DrawInstanced(_In_ ID3D12GraphicsCommandList* commandList, uint32_t instanceCount, uint32_t startInstanceLocation) const;
     
     UINT                        mIndexCount;
     SharedGraphicsResource      mIndexBuffer;
@@ -59,15 +59,15 @@ void GeometricPrimitive::Impl::Initialize(
     _In_opt_ ID3D12Device* device)
 {
     if (vertices.size() >= USHRT_MAX)
-        throw std::exception("Too many vertices for 16-bit index buffer");
+        throw std::invalid_argument("Too many vertices for 16-bit index buffer");
 
     if (indices.size() > UINT32_MAX)
-        throw std::exception("Too many indices");
+        throw std::invalid_argument("Too many indices");
 
     // Vertex data
     uint64_t sizeInBytes = uint64_t(vertices.size()) * sizeof(vertices[0]);
     if (sizeInBytes > uint64_t(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
-        throw std::exception("VB too large for DirectX 12");
+        throw std::invalid_argument("VB too large for DirectX 12");
 
     auto vertSizeBytes = static_cast<size_t>(sizeInBytes);
 
@@ -79,7 +79,7 @@ void GeometricPrimitive::Impl::Initialize(
     // Index data
     sizeInBytes = uint64_t(indices.size()) * sizeof(indices[0]);
     if (sizeInBytes > uint64_t(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
-        throw std::exception("IB too large for DirectX 12");
+        throw std::invalid_argument("IB too large for DirectX 12");
 
     auto indSizeBytes = static_cast<size_t>(sizeInBytes);
 
@@ -216,13 +216,13 @@ void GeometricPrimitive::Impl::Transition(
 
 // Draws the primitive.
 _Use_decl_annotations_
-void GeometricPrimitive::Impl::Draw(ID3D12GraphicsCommandList* commandList) const
+void GeometricPrimitive::Impl::DrawInstanced(ID3D12GraphicsCommandList* commandList, uint32_t instanceCount, uint32_t startInstanceLocation) const
 {
     commandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
     commandList->IASetIndexBuffer(&mIndexBufferView);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    commandList->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);
+    commandList->DrawIndexedInstanced(mIndexCount, instanceCount, 0, 0, startInstanceLocation);
 }
 
 //--------------------------------------------------------------------------------------
@@ -265,7 +265,14 @@ void GeometricPrimitive::Transition(
 _Use_decl_annotations_
 void GeometricPrimitive::Draw(ID3D12GraphicsCommandList* commandList) const
 {
-    pImpl->Draw(commandList);
+    pImpl->DrawInstanced(commandList, 1, 0);
+}
+
+
+_Use_decl_annotations_
+void GeometricPrimitive::DrawInstanced(ID3D12GraphicsCommandList* commandList, uint32_t instanceCount, uint32_t startInstanceLocation) const
+{
+    pImpl->DrawInstanced(commandList, instanceCount, startInstanceLocation);
 }
 
 
@@ -292,8 +299,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateCube(
 }
 
 void GeometricPrimitive::CreateCube(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float size,
     bool rhcoords)
 {
@@ -321,8 +328,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateBox(
 }
 
 void GeometricPrimitive::CreateBox(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     const XMFLOAT3& size,
     bool rhcoords,
     bool invertn)
@@ -357,8 +364,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateSphere(
 }
 
 void GeometricPrimitive::CreateSphere(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices, 
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float diameter,
     size_t tessellation,
     bool rhcoords,
@@ -392,8 +399,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateGeoSphere(
 }
 
 void GeometricPrimitive::CreateGeoSphere(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float diameter,
     size_t tessellation,
     bool rhcoords)
@@ -427,8 +434,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateCylinder(
 }
 
 void GeometricPrimitive::CreateCylinder(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float height, float diameter,
     size_t tessellation,
     bool rhcoords)
@@ -458,8 +465,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateCone(
 }
 
 void GeometricPrimitive::CreateCone(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float diameter,
     float height, 
     size_t tessellation,
@@ -494,8 +501,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateTorus(
 }
 
 void GeometricPrimitive::CreateTorus(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float diameter,
     float thickness,
     size_t tessellation,
@@ -527,8 +534,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateTetrahedron(
 }
 
 void GeometricPrimitive::CreateTetrahedron(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float size,
     bool rhcoords)
 {
@@ -558,8 +565,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateOctahedron(
 }
 
 void GeometricPrimitive::CreateOctahedron(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float size,
     bool rhcoords)
 {
@@ -589,8 +596,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateDodecahedron(
 }
 
 void GeometricPrimitive::CreateDodecahedron(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float size,
     bool rhcoords)
 {
@@ -620,8 +627,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateIcosahedron(
 }
 
 void GeometricPrimitive::CreateIcosahedron(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float size,
     bool rhcoords)
 {
@@ -653,8 +660,8 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateTeapot(
 }
 
 void GeometricPrimitive::CreateTeapot(
-    std::vector<VertexType>& vertices,
-    std::vector<uint16_t>& indices,
+    VertexCollection& vertices,
+    IndexCollection& indices,
     float size, size_t tessellation,
     bool rhcoords)
 {
@@ -667,26 +674,26 @@ void GeometricPrimitive::CreateTeapot(
 //--------------------------------------------------------------------------------------
 
 std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateCustom(
-    const std::vector<VertexType>& vertices,
-    const std::vector<uint16_t>& indices,
+    const VertexCollection& vertices,
+    const IndexCollection& indices,
     _In_opt_ ID3D12Device* device)
 {
     // Extra validation
     if (vertices.empty() || indices.empty())
-        throw std::exception("Requires both vertices and indices");
+        throw std::invalid_argument("Requires both vertices and indices");
 
     if (indices.size() % 3)
-        throw std::exception("Expected triangular faces");
+        throw std::invalid_argument("Expected triangular faces");
 
     size_t nVerts = vertices.size();
     if (nVerts >= USHRT_MAX)
-        throw std::exception("Too many vertices for 16-bit index buffer");
+        throw std::invalid_argument("Too many vertices for 16-bit index buffer");
 
-    for (auto it = indices.cbegin(); it != indices.cend(); ++it)
+    for (auto it : indices)
     {
-        if (*it >= nVerts)
+        if (it >= nVerts)
         {
-            throw std::exception("Index not in vertices list");
+            throw std::out_of_range("Index not in vertices list");
         }
     }
     // Create the primitive object.
