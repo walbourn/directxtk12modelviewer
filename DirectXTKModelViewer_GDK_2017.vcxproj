@@ -342,8 +342,10 @@
   <ItemGroup>
     <Image Include="Atrium_diffuseIBL.dds" />
     <Image Include="Atrium_specularIBL.dds" />
+    <Image Include="default.dds" />
     <Image Include="Garage_diffuseIBL.dds" />
     <Image Include="Garage_specularIBL.dds" />
+    <Image Include="smoothMap.dds" />
     <Image Include="SunSubMixer_diffuseIBL.dds" />
     <Image Include="SunSubMixer_specularIBL.dds" />
   </ItemGroup>

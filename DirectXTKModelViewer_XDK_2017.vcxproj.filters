@@ -75,6 +75,12 @@
     <Image Include="SunSubMixer_specularIBL.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="default.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="smoothMap.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <None Include="comic.spritefont">

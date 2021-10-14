@@ -194,10 +194,12 @@
   <ItemGroup>
     <Image Include="Atrium_diffuseIBL.dds" />
     <Image Include="Atrium_specularIBL.dds" />
+    <Image Include="default.dds" />
     <Image Include="Garage_diffuseIBL.dds" />
     <Image Include="Garage_specularIBL.dds" />
     <Image Include="Logo.png" />
     <Image Include="SmallLogo.png" />
+    <Image Include="smoothMap.dds" />
     <Image Include="SplashScreen.png" />
     <Image Include="StoreLogo.png" />
     <Image Include="SunSubMixer_diffuseIBL.dds" />

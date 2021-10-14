@@ -78,6 +78,8 @@ Game::Game() noexcept(false) :
     *m_szModelName = 0;
     *m_szStatus = 0;
     *m_szError = 0;
+
+    m_defaultTextureName = L"default.dds";
 }
 
 Game::~Game()
@@ -1000,6 +1002,16 @@ void Game::CreateDeviceDependentResources()
         CreateShaderResourceView(device, m_irradianceIBL[j].Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::IrradianceIBL1 + j), true);
     }
 
+#ifndef XBOX
+    wchar_t defaultTex[_MAX_PATH] = {};
+    DX::FindMediaFile(defaultTex, _MAX_PATH, m_defaultTextureName.c_str());
+
+    wchar_t defaultTexPath[_MAX_PATH] = {};
+    GetFullPathName(defaultTex, MAX_PATH, defaultTexPath, nullptr);
+
+    m_defaultTextureName = defaultTexPath;
+#endif
+
     auto uploadResourcesFinished = resourceUpload.End(m_deviceResources->GetCommandQueue());
 
     m_deviceResources->WaitForGpu();
@@ -1128,6 +1140,7 @@ void Game::LoadModel()
 
     bool isvbo = false;
     bool issdkmesh2 = false;
+    bool iscmo = false;
     try
     {
         if (_wcsicmp(ext, L".sdkmesh") == 0)
@@ -1143,7 +1156,12 @@ void Game::LoadModel()
                 }
             }
 
-            m_model = Model::CreateFromSDKMESH(device, modelBin.data(), modelBin.size());
+            m_model = Model::CreateFromSDKMESH(device, modelBin.data(), modelBin.size(), ModelLoader_DisableSkinning);
+        }
+        else if (_wcsicmp(ext, L".cmo") == 0)
+        {
+            iscmo = true;
+            m_model = Model::CreateFromCMO(device, m_szModelName);
         }
         else if (_wcsicmp(ext, L".vbo") == 0)
         {
@@ -1168,6 +1186,27 @@ void Game::LoadModel()
 
     if (m_model)
     {
+        // First check for 'missing' textures
+        int defaultTex = -1;
+
+        for (auto& it : m_model->materials)
+        {
+            if (it.enableSkinning || it.enableNormalMaps)
+            {
+                if (it.diffuseTextureIndex == -1)
+                {
+                    if (defaultTex == -1)
+                    {
+                        defaultTex = static_cast<int>(m_model->textureNames.size());
+                        m_model->textureNames.push_back(m_defaultTextureName);
+                    }
+
+                    it.diffuseTextureIndex = defaultTex;
+                    it.samplerIndex = static_cast<int>(CommonStates::SamplerIndex::AnisotropicWrap);
+                }
+            }
+        }
+
         ResourceUploadBatch resourceUpload(device);
 
         resourceUpload.Begin();
@@ -1245,24 +1284,28 @@ void Game::LoadModel()
             }
             else
             {
+                const auto& cull = iscmo ? CommonStates::CullCounterClockwise : CommonStates::CullClockwise;
+
                 EffectPipelineStateDescription pd(
                     nullptr,
                     CommonStates::Opaque,
                     CommonStates::DepthDefault,
-                    CommonStates::CullClockwise,
+                    cull,
                     hdrState);
 
                 EffectPipelineStateDescription pdAlpha(
                     nullptr,
                     CommonStates::AlphaBlend,
                     CommonStates::DepthDefault,
-                    CommonStates::CullClockwise,
+                    cull,
                     hdrState);
 
                 m_modelClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
-                pd.rasterizerDesc = CommonStates::CullCounterClockwise;
-                pdAlpha.rasterizerDesc = CommonStates::CullCounterClockwise;
+                const auto& cull2 = iscmo ? CommonStates::CullClockwise : CommonStates::CullCounterClockwise;
+
+                pd.rasterizerDesc = cull2;
+                pdAlpha.rasterizerDesc = cull2;
 
                 m_modelCounterClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
@@ -1517,7 +1560,7 @@ void Game::EnumerateModelFiles()
 
     WIN32_FIND_DATA ffdata = {};
 
-    static const wchar_t* exts[] = { L"D:\\*.sdkmesh", L"D:\\*.vbo" };
+    static const wchar_t* exts[] = { L"D:\\*.sdkmesh", L"D:\\*.cmo", L"D:\\*.vbo" };
 
     for (size_t j = 0; j < _countof(exts); ++j)
     {

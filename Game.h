@@ -146,6 +146,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource>          m_radianceIBL[s_nIBL];
     Microsoft::WRL::ComPtr<ID3D12Resource>          m_irradianceIBL[s_nIBL];
 
+    std::wstring                                    m_defaultTextureName;
+
     enum Descriptors
     {
         ConsolasFont,
