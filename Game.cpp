@@ -1231,7 +1231,7 @@ void Game::LoadModel()
 
         try
         {
-            (void)m_model->LoadTextures(*m_modelResources, txtOffset);
+            std::ignore = m_model->LoadTextures(*m_modelResources, txtOffset);
         }
         catch (...)
         {
