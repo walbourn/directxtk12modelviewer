@@ -1279,20 +1279,23 @@ void Game::LoadModel()
         // First check for 'missing' textures
         int defaultTex = -1;
 
-        for (auto& it : m_model->materials)
+        if (!issdkmesh2)
         {
-            if (it.enableSkinning || it.enableNormalMaps)
+            for (auto& it : m_model->materials)
             {
-                if (it.diffuseTextureIndex == -1)
+                if (it.enableSkinning || it.enableNormalMaps)
                 {
-                    if (defaultTex == -1)
+                    if (it.diffuseTextureIndex == -1)
                     {
-                        defaultTex = static_cast<int>(m_model->textureNames.size());
-                        m_model->textureNames.push_back(m_defaultTextureName);
-                    }
+                        if (defaultTex == -1)
+                        {
+                            defaultTex = static_cast<int>(m_model->textureNames.size());
+                            m_model->textureNames.push_back(m_defaultTextureName);
+                        }
 
-                    it.diffuseTextureIndex = defaultTex;
-                    it.samplerIndex = static_cast<int>(CommonStates::SamplerIndex::AnisotropicWrap);
+                        it.diffuseTextureIndex = defaultTex;
+                        it.samplerIndex = static_cast<int>(CommonStates::SamplerIndex::AnisotropicWrap);
+                    }
                 }
             }
         }
