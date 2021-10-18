@@ -1225,7 +1225,6 @@ void Game::LoadModel()
 
     bool isvbo = false;
     bool issdkmesh2 = false;
-    bool iscmo = false;
     try
     {
         if (_wcsicmp(ext, L".sdkmesh") == 0)
@@ -1242,11 +1241,12 @@ void Game::LoadModel()
             }
 
             m_model = Model::CreateFromSDKMESH(device, modelBin.data(), modelBin.size(), ModelLoader_IncludeBones);
+            m_ccw = true;
         }
         else if (_wcsicmp(ext, L".cmo") == 0)
         {
-            iscmo = true;
             m_model = Model::CreateFromCMO(device, m_szModelName, ModelLoader_IncludeBones);
+            m_ccw = false;
         }
         else if (_wcsicmp(ext, L".vbo") == 0)
         {
@@ -1374,28 +1374,23 @@ void Game::LoadModel()
             }
             else
             {
-                const auto& cull = iscmo ? CommonStates::CullCounterClockwise : CommonStates::CullClockwise;
-
                 EffectPipelineStateDescription pd(
                     nullptr,
                     CommonStates::Opaque,
                     CommonStates::DepthDefault,
-                    cull,
+                    CommonStates::CullClockwise,
                     hdrState);
 
                 EffectPipelineStateDescription pdAlpha(
                     nullptr,
                     CommonStates::AlphaBlend,
                     CommonStates::DepthDefault,
-                    cull,
+                    CommonStates::CullClockwise,
                     hdrState);
 
                 m_modelClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
-                const auto& cull2 = iscmo ? CommonStates::CullClockwise : CommonStates::CullCounterClockwise;
-
-                pd.rasterizerDesc = cull2;
-                pdAlpha.rasterizerDesc = cull2;
+                pd.rasterizerDesc = pdAlpha.rasterizerDesc = CommonStates::CullCounterClockwise;
 
                 m_modelCounterClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
