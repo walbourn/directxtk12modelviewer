@@ -3,7 +3,7 @@
 //
 // Helper for managing offscreen render targets
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //-------------------------------------------------------------------------------------
 
@@ -13,17 +13,15 @@
 #include "DirectXHelpers.h"
 
 #include <algorithm>
-#include <stdio.h>
+#include <cstdio>
 #include <stdexcept>
-
-#include <wrl/client.h>
 
 using namespace DirectX;
 using namespace DX;
 
 using Microsoft::WRL::ComPtr;
 
-RenderTexture::RenderTexture(DXGI_FORMAT format) :
+RenderTexture::RenderTexture(DXGI_FORMAT format) noexcept :
     m_state(D3D12_RESOURCE_STATE_COMMON),
     m_srvDescriptor{},
     m_rtvDescriptor{},
@@ -34,7 +32,9 @@ RenderTexture::RenderTexture(DXGI_FORMAT format) :
 {
 }
 
-void RenderTexture::SetDevice(_In_ ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE srvDescriptor, D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptor)
+void RenderTexture::SetDevice(_In_ ID3D12Device* device,
+    D3D12_CPU_DESCRIPTOR_HANDLE srvDescriptor,
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptor)
 {
     if (device == m_device.Get()
         && srvDescriptor.ptr == m_srvDescriptor.ptr
@@ -50,7 +50,7 @@ void RenderTexture::SetDevice(_In_ ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HA
         D3D12_FEATURE_DATA_FORMAT_SUPPORT formatSupport = { m_format, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE };
         if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &formatSupport, sizeof(formatSupport))))
         {
-            throw std::exception("CheckFeatureSupport");
+            throw std::runtime_error("CheckFeatureSupport");
         }
 
         UINT required = D3D12_FORMAT_SUPPORT1_TEXTURE2D | D3D12_FORMAT_SUPPORT1_RENDER_TARGET;
@@ -61,13 +61,13 @@ void RenderTexture::SetDevice(_In_ ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HA
             sprintf_s(buff, "RenderTexture: Device does not support the requested format (%u)!\n", m_format);
             OutputDebugStringA(buff);
 #endif
-            throw std::exception("RenderTexture");
+            throw std::runtime_error("RenderTexture");
         }
     }
 
     if (!srvDescriptor.ptr || !rtvDescriptor.ptr)
     {
-        throw std::exception("Invalid descriptors");
+        throw std::runtime_error("Invalid descriptors");
     }
 
     m_device = device;
@@ -98,7 +98,7 @@ void RenderTexture::SizeResources(size_t width, size_t height)
         static_cast<UINT>(height),
         1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
-    D3D12_CLEAR_VALUE clearValue = { m_format, { 0 } };
+    D3D12_CLEAR_VALUE clearValue = { m_format, {} };
     memcpy(clearValue.Color, m_clearColor, sizeof(clearValue.Color));
 
     m_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -123,7 +123,7 @@ void RenderTexture::SizeResources(size_t width, size_t height)
     m_height = height;
 }
 
-void RenderTexture::ReleaseDevice()
+void RenderTexture::ReleaseDevice() noexcept
 {
     m_resource.Reset();
     m_device.Reset();
@@ -134,7 +134,8 @@ void RenderTexture::ReleaseDevice()
     m_srvDescriptor.ptr = m_rtvDescriptor.ptr = 0;
 }
 
-void RenderTexture::TransitionTo(_In_ ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES afterState)
+void RenderTexture::TransitionTo(_In_ ID3D12GraphicsCommandList* commandList,
+    D3D12_RESOURCE_STATES afterState)
 {
     TransitionResource(commandList, m_resource.Get(), m_state, afterState);
     m_state = afterState;
@@ -148,4 +149,3 @@ void RenderTexture::SetWindow(const RECT& output)
 
     SizeResources(width, height);
 }
-

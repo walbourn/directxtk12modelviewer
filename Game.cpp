@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: Game.cpp
 //
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 //--------------------------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ Game::Game() noexcept(false) :
 
     if (s_render4k)
     {
-        flags |= DX::DeviceResources::c_Enable4K_UHD;
+        flags |= DX::DeviceResources::c_Enable4K_UHD | DX::DeviceResources::c_EnableQHD;
     }
 
     m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM, DXGI_FORMAT_D32_FLOAT, 2,

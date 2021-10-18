@@ -60,7 +60,11 @@ DeviceResources::~DeviceResources()
 }
 
 // Configures the Direct3D device, and stores handles to it and the device context.
+#ifdef _GAMING_XBOX_SCARLETT
+void DeviceResources::CreateDeviceResources(D3D12XBOX_CREATE_DEVICE_FLAGS createDeviceFlags)
+#else
 void DeviceResources::CreateDeviceResources()
+#endif
 {
     // Create the DX12 API device object.
     D3D12XBOX_CREATE_DEVICE_PARAMETERS params = {};
@@ -77,6 +81,9 @@ void DeviceResources::CreateDeviceResources()
     params.GraphicsCommandQueueRingSizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
     params.GraphicsScratchMemorySizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
     params.ComputeScratchMemorySizeBytes = static_cast<UINT>(D3D12XBOX_DEFAULT_SIZE_BYTES);
+#ifdef _GAMING_XBOX_SCARLETT
+    params.CreateDeviceFlags = createDeviceFlags;
+#endif
 
     HRESULT hr = D3D12XboxCreateDevice(
         nullptr,
@@ -86,9 +93,9 @@ void DeviceResources::CreateDeviceResources()
     if (hr == D3D12_ERROR_DRIVER_VERSION_MISMATCH)
     {
 #ifdef _GAMING_XBOX_SCARLETT
-        OutputDebugStringA("ERROR: Running a d3d12_xs.lib (Scarlett) linked binary on an Xbox One is not supported\n");
+        OutputDebugStringA("ERROR: Running a d3d12_xs.lib (Xbox Series X|S) linked binary on an Xbox One is not supported\n");
 #else
-        OutputDebugStringA("ERROR: Running a d3d12_x.lib (Xbox One) linked binary on a Scarlett device is not supported\n");
+        OutputDebugStringA("ERROR: Running a d3d12_x.lib (Xbox One) linked binary on a Xbox Series X|S in 'Scarlett' mode is not supported\n");
 #endif
     }
 #endif
@@ -152,30 +159,44 @@ void DeviceResources::CreateDeviceResources()
     m_fenceEvent.Attach(CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE));
     if (!m_fenceEvent.IsValid())
     {
-        throw std::exception("CreateEvent");
+        throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "CreateEventEx");
     }
 
-    if (m_options & c_Enable4K_UHD)
+    if (m_options & (c_Enable4K_UHD | c_EnableQHD))
     {
         switch (XSystemGetDeviceType())
         {
         case XSystemDeviceType::XboxOne:
         case XSystemDeviceType::XboxOneS:
-        case XSystemDeviceType::XboxScarlettLockhart:
-            m_options &= ~c_Enable4K_UHD;
-#ifdef _DEBUG
-            OutputDebugStringA("INFO: Swapchain using 1080p (1920 x 1080)\n");
-#endif
+            m_options &= ~(c_Enable4K_UHD | c_EnableQHD);
             break;
 
+        case XSystemDeviceType::XboxScarlettLockhart /* Xbox Series S */:
+            m_options &= ~c_Enable4K_UHD;
+            if (m_options & c_EnableQHD)
+            {
+                m_outputSize = { 0, 0, 2560, 1440 };
+            }
+            break;
+
+        case XSystemDeviceType::XboxScarlettAnaconda /* Xbox Series X */:
+        case XSystemDeviceType::XboxScarlettDevkit:
         default:
-            m_outputSize = { 0, 0, 3840, 2160 };
-#ifdef _DEBUG
-            OutputDebugStringA("INFO: Swapchain using 4k (3840 x 2160)\n");
-#endif
+            m_outputSize = (m_options & c_Enable4K_UHD) ? RECT{ 0, 0, 3840, 2160 } : RECT{ 0, 0, 2560, 1440 };
             break;
         }
     }
+
+#ifdef _DEBUG
+    const char* info = nullptr;
+    switch (m_outputSize.bottom)
+    {
+    case 2160:    info = "INFO: Swapchain using 4k (3840 x 2160)\n"; break;
+    case 1440:    info = "INFO: Swapchain using 1440p (2560 x 1440)\n"; break;
+    default:      info = "INFO: Swapchain using 1080p (1920 x 1080)\n"; break;
+    }
+    OutputDebugStringA(info);
+#endif
 
     RegisterFrameEvents();
 }
@@ -185,7 +206,7 @@ void DeviceResources::CreateWindowSizeDependentResources()
 {
     if (!m_window)
     {
-        throw std::exception("Call SetWindow with a valid window handle");
+        throw std::logic_error("Call SetWindow with a valid Win32 window handle");
     }
 
     // Wait until all previous GPU work is complete.
