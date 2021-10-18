@@ -97,6 +97,7 @@ private:
 
     void CycleBackgroundColor();
     void CycleToneMapOperator();
+    void CycleBoneRenderMode();
 
     void CreateProjection();
 
@@ -136,12 +137,13 @@ private:
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelClockwise;
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelCounterClockwise;
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelWireframe;
+    DirectX::ModelBone::TransformArray              m_bones;
 
     std::unique_ptr<DirectX::SpriteBatch>           m_spriteBatch;
     std::unique_ptr<DirectX::SpriteFont>            m_fontConsolas;
     std::unique_ptr<DirectX::SpriteFont>            m_fontComic;
 
-    static const size_t s_nIBL = 3;
+    static constexpr size_t s_nIBL = 3;
 
     Microsoft::WRL::ComPtr<ID3D12Resource>          m_radianceIBL[s_nIBL];
     Microsoft::WRL::ComPtr<ID3D12Resource>          m_irradianceIBL[s_nIBL];
@@ -208,6 +210,8 @@ private:
     bool                                            m_reloadModel;
     bool                                            m_lhcoords;
     bool                                            m_fpscamera;
+    bool                                            m_boneMode;
+    bool                                            m_skinning;
 
     int                                             m_toneMapMode;
 

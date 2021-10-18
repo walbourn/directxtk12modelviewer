@@ -49,6 +49,8 @@ Game::Game() noexcept(false) :
     m_reloadModel(false),
     m_lhcoords(true),
     m_fpscamera(false),
+    m_boneMode(false),
+    m_skinning(false),
     m_toneMapMode(ToneMapPostProcess::Reinhard),
     m_selectFile(0),
     m_firstFile(0)
@@ -324,6 +326,11 @@ void Game::Update(DX::StepTimer const& timer)
                 m_cameraRot = m_modelRot = Quaternion::Identity;
             }
 
+            if (m_gamepadButtonTracker.leftStick == GamePad::ButtonStateTracker::PRESSED)
+            {
+                CycleBoneRenderMode();
+            }
+
             // TODO - m_ibl
         }
     }
@@ -435,6 +442,9 @@ void Game::Update(DX::StepTimer const& timer)
 
         if (m_keyboardTracker.pressed.T)
             CycleToneMapOperator();
+
+        if (m_keyboardTracker.pressed.N)
+            CycleBoneRenderMode();
 
         if (m_keyboardTracker.pressed.O)
         {
@@ -658,23 +668,84 @@ void Game::Render()
                 }
             }
 
+            if (!m_model->bones.empty())
+            {
+                const size_t nbones = m_model->bones.size();
+                assert(m_bones != 0);
+                m_model->CopyAbsoluteBoneTransformsTo(nbones, m_bones.get());
+                if (m_skinning)
+                {
+                    for (size_t j = 0; j < nbones; ++j)
+                    {
+                        m_bones[j] = XMMatrixMultiply(m_model->invBindPoseMatrices[j], m_bones[j]);
+                    }
+                }
+            }
+
+            Model::EffectCollection::const_iterator eit;
             if (m_wireframe)
             {
                 Model::UpdateEffectMatrices(m_modelWireframe, m_world, m_view, m_proj);
-
-                m_model->Draw(commandList, m_modelWireframe.cbegin());
+                if (m_skinning && !m_boneMode)
+                {
+                    for (auto& it : m_modelWireframe)
+                    {
+                        auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                        if (skinning)
+                        {
+                            skinning->ResetBoneTransforms();
+                        }
+                    }
+                }
+                eit = m_modelWireframe.cbegin();
             }
             else if (m_ccw)
             {
                 Model::UpdateEffectMatrices(m_modelCounterClockwise, m_world, m_view, m_proj);
-
-                m_model->Draw(commandList, m_modelCounterClockwise.cbegin());
+                if (m_skinning && !m_boneMode)
+                {
+                    for (auto& it : m_modelCounterClockwise)
+                    {
+                        auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                        if (skinning)
+                        {
+                            skinning->ResetBoneTransforms();
+                        }
+                    }
+                }
+                eit = m_modelCounterClockwise.cbegin();
             }
             else
             {
                 Model::UpdateEffectMatrices(m_modelClockwise, m_world, m_view, m_proj);
+                if (m_skinning && !m_boneMode)
+                {
+                    for (auto& it : m_modelClockwise)
+                    {
+                        auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                        if (skinning)
+                        {
+                            skinning->ResetBoneTransforms();
+                        }
+                    }
+                }
+                eit = m_modelClockwise.cbegin();
+            }
 
-                m_model->Draw(commandList, m_modelClockwise.cbegin());
+            if (m_boneMode)
+            {
+                if (m_skinning)
+                {
+                    m_model->DrawSkinned(commandList, m_model->bones.size(), m_bones.get(), m_world, eit);
+                }
+                else
+                {
+                    m_model->Draw(commandList, m_model->bones.size(), m_bones.get(), m_world, eit);
+                }
+            }
+            else
+            {
+                m_model->Draw(commandList, eit);
             }
 
             if (*m_szStatus && m_showHud)
@@ -723,8 +794,18 @@ void Game::Render()
                 }
 #endif
 
+                const wchar_t* viewMode;
+                if (m_boneMode)
+                {
+                    viewMode = (m_skinning) ? L"Model bone (Vertex skinning)" : L"Model bone (Rigid)";
+                }
+                else
+                {
+                    viewMode = (m_model && !m_model->bones.empty()) ? L"Ignoring model bones" : L"";
+                }
+
                 wchar_t szState[128] = {};
-                swprintf_s(szState, L"%ls    Tone-mapping operator: %ls", mode, toneMap);
+                swprintf_s(szState, L"%-20ls    Tone-mapping operator: %-12ls    %ls", mode, toneMap, viewMode);
 
                 wchar_t szMode[64] = {};
                 swprintf_s(szMode, L" %ls (Sensitivity: %8.4f)", (m_fpscamera) ? L"  FPS" : L"Orbit", m_sensitivity);
@@ -1080,6 +1161,7 @@ void Game::OnDeviceLost()
     m_modelClockwise.clear();
     m_modelCounterClockwise.clear();
     m_modelWireframe.clear();
+    m_bones.reset();
 
     m_lineEffect.reset();
     m_lineBatch.reset();
@@ -1114,6 +1196,7 @@ void Game::OnDeviceRestored()
 
 void Game::LoadModel()
 {
+    m_bones.reset();
     m_modelClockwise.clear();
     m_modelCounterClockwise.clear();
     m_modelWireframe.clear();
@@ -1125,6 +1208,8 @@ void Game::LoadModel()
     *m_szStatus = 0;
     *m_szError = 0;
     m_reloadModel = false;
+    m_boneMode = false;
+    m_skinning = false;
     m_modelRot = Quaternion::Identity;
 
     if (!*m_szModelName)
@@ -1156,12 +1241,12 @@ void Game::LoadModel()
                 }
             }
 
-            m_model = Model::CreateFromSDKMESH(device, modelBin.data(), modelBin.size(), ModelLoader_DisableSkinning);
+            m_model = Model::CreateFromSDKMESH(device, modelBin.data(), modelBin.size(), ModelLoader_IncludeBones);
         }
         else if (_wcsicmp(ext, L".cmo") == 0)
         {
             iscmo = true;
-            m_model = Model::CreateFromCMO(device, m_szModelName);
+            m_model = Model::CreateFromCMO(device, m_szModelName, ModelLoader_IncludeBones);
         }
         else if (_wcsicmp(ext, L".vbo") == 0)
         {
@@ -1186,6 +1271,11 @@ void Game::LoadModel()
 
     if (m_model)
     {
+        if (!m_model->bones.empty())
+        {
+            m_bones = ModelBone::MakeArray(m_model->bones.size());
+        }
+
         // First check for 'missing' textures
         int defaultTex = -1;
 
@@ -1350,6 +1440,18 @@ void Game::LoadModel()
             else
             {
                 swprintf_s(m_szStatus, L"Verts: %6Iu   Faces: %6Iu   Subsets: %6Iu", nverts, nfaces, nsubsets);
+            }
+
+            for (const auto& it : m_modelClockwise)
+            {
+                if (dynamic_cast<IEffectSkinning*>(it.get()) != nullptr)
+                {
+                    m_skinning = true;
+                    break;
+                }
+
+                if (m_skinning)
+                    break;
             }
         }
 
@@ -1528,6 +1630,19 @@ void Game::CycleToneMapOperator()
     {
         m_toneMapMode = ToneMapPostProcess::Saturate;
     }
+}
+
+void Game::CycleBoneRenderMode()
+{
+    if (!m_model
+        || m_model->bones.empty()
+        || m_boneMode)
+    {
+        m_boneMode = false;
+        return;
+    }
+
+    m_boneMode = true;
 }
 
 void Game::CreateProjection()

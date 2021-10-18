@@ -70,6 +70,7 @@ If no controller is plugged in, you can use keyboard & mouse controls. If you pr
     J toggles the cross display
     R toggles wireframe
     T cycles tone-mapping operator
+    N cycles bone rendering mode (World vs. Rigid/Skinnned)
 
     [/] scales the FOV
     +/- scales the grid size
@@ -121,6 +122,7 @@ For Xbox, only the gamepad controls are available. When you press the "View" but
               L – Rotate (Roll) Left
               U – Move towards view point
               D – Move away from view point
+              Click - cycles bone rendering mode
 
     FPS
         Right Thumbstick
@@ -134,6 +136,7 @@ For Xbox, only the gamepad controls are available. When you press the "View" but
               L – Translate Left
               U – Translate Forward
               D – Translate Back
+              Click - cycles bone rendering mode
 
 For Xbox, after you start up the viewer app, you can use the Xbox Developer Command Prompt to copy data files to the system:
 
