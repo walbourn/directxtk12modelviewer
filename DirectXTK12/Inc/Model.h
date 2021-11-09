@@ -24,6 +24,7 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -569,8 +570,8 @@ namespace DirectX
             int samplerDescriptorOffset,
             _In_ const ModelMeshPart* part) const;
 
-        void XM_CALLCONV ComputeAbsolute(uint32_t index,
-            FXMMATRIX local, size_t nbones,
+        void __cdecl ComputeAbsolute(uint32_t index,
+            CXMMATRIX local, size_t nbones,
             _In_reads_(nbones) const XMMATRIX* inBoneTransforms,
             _Inout_updates_(nbones) XMMATRIX* outBoneTransforms,
             size_t& visited) const;
