@@ -385,6 +385,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
 
+    case WM_DISPLAYCHANGE:
+        if (game)
+        {
+            game->OnDisplayChange();
+        }
+        break;
+
     case WM_MOVE:
         if (game)
         {
@@ -555,6 +562,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
 
+    case WM_ACTIVATE:
     case WM_MOUSEMOVE:
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:
@@ -568,6 +576,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         Mouse::ProcessMessage(message, wParam, lParam);
         break;
 
+    case WM_MOUSEACTIVATE:
+        // When you click activate the window, we want Mouse to ignore that event.
+        return MA_ACTIVATEANDEAT;
     }
 
     return DefWindowProc(hWnd, message, wParam, lParam);

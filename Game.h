@@ -70,6 +70,7 @@ public:
 
 #ifdef PC
     void OnWindowMoved();
+    void OnDisplayChange();
     void OnWindowSizeChanged(int width, int height);
 #endif
 
