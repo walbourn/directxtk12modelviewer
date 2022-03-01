@@ -49,6 +49,7 @@
     <TargetRuntime>Native</TargetRuntime>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
+  <Import Condition="Exists($(ATGBuildProps))" Project="$(ATGBuildProps)" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Gaming.Xbox.XboxOne.x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -371,6 +372,8 @@
       <AdditionalIncludeDirectories>$(ProjectDir)Inc;$(ProjectDir)Src;$(ProjectDir)Src\Shaders\Compiled;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <ExternalWarningLevel>Level4</ExternalWarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <FXCompile>
       <ShaderModel>6.0</ShaderModel>
@@ -397,6 +400,8 @@
       <AdditionalIncludeDirectories>$(ProjectDir)Inc;$(ProjectDir)Src;$(ProjectDir)Src\Shaders\Compiled;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <ExternalWarningLevel>Level4</ExternalWarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <FXCompile>
       <ShaderModel>6.0</ShaderModel>
@@ -476,6 +481,8 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <ExternalWarningLevel>Level4</ExternalWarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <FXCompile>
       <ShaderModel>6.0</ShaderModel>
