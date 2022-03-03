@@ -151,7 +151,7 @@ private:
 
     std::wstring                                    m_defaultTextureName;
 
-    enum Descriptors
+    enum Descriptors : size_t
     {
         ConsolasFont,
         ComicFont,
@@ -166,7 +166,7 @@ private:
         Count = 1024
     };
 
-    enum RTVDescriptors
+    enum RTVDescriptors : size_t
     {
         HDRScene,
         RTVCount

@@ -9,6 +9,10 @@
 
 #pragma once
 
+#pragma warning(disable : 4619 4616 26812)
+// C4619/4616 #pragma warning warnings
+// 26812: The enum type 'x' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
+
 // Use the C++ standard templated min/max
 #define NOMINMAX
 
