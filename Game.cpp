@@ -335,7 +335,7 @@ void Game::Update(DX::StepTimer const& timer)
         }
     }
 #ifdef PC
-    else
+    //else
     {
         m_usingGamepad = false;
 
