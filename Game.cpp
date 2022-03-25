@@ -61,7 +61,10 @@ Game::Game() noexcept(false) :
 
     if (s_render4k)
     {
-        flags |= DX::DeviceResources::c_Enable4K_UHD | DX::DeviceResources::c_EnableQHD;
+        flags |= DX::DeviceResources::c_Enable4K_UHD;
+#ifndef _TITLE
+        flags |= DX::DeviceResources::c_EnableQHD;
+#endif
     }
 
     m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM, DXGI_FORMAT_D32_FLOAT, 2,
