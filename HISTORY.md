@@ -2,11 +2,11 @@
 
 Release available for download on [GitHub](https://github.com/walbourn/directxtk12modelviewer/releases)
 
-### Release History
+## Release History
 
 ### March 22, 2022
 * Updated for March 2022 release of DirectX Tool Kit
-* Converted Desktop project to VS 2019
+* Converted Desktop and GDK projects to VS 2019
 * Update build switches for SDL recommendations
 * Dropped support for legacy Xbox One XDK prior to April 2018
 
