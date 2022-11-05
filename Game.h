@@ -63,7 +63,7 @@ public:
 
     // Messages
     void OnActivated();
-    void OnDeactivated();
+    void OnDeactivated() {}
     void OnSuspending();
     void OnResuming();
     void OnFileOpen(const wchar_t* filename);

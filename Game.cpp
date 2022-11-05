@@ -127,6 +127,10 @@ void Game::Initialize(HWND window, int width, int height)
 // Executes the basic game loop.
 void Game::Tick()
 {
+#ifdef _GAMING_XBOX
+    m_deviceResources->WaitForOrigin();
+#endif
+
     m_timer.Tick([&]()
     {
         Update(m_timer);
@@ -1012,16 +1016,15 @@ void Game::OnActivated()
     m_gamepadButtonTracker.Reset();
 }
 
-void Game::OnDeactivated()
-{
-}
-
 void Game::OnSuspending()
 {
+    m_deviceResources->Suspend();
 }
 
 void Game::OnResuming()
 {
+    m_deviceResources->Resume();
+
     m_timer.ResetElapsedTime();
     m_keyboardTracker.Reset();
     m_mouseButtonTracker.Reset();
