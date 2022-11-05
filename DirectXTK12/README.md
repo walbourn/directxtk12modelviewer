@@ -6,11 +6,11 @@ http://go.microsoft.com/fwlink/?LinkID=615561
 
 Copyright (c) Microsoft Corporation.
 
-**March 24, 2022**
+**October 17, 2022**
 
 This package contains the "DirectX Tool Kit", a collection of helper classes for writing Direct3D 12 C++ code for Universal Windows Platform (UWP) apps for Windows 11 / Windows 10, game titles for Xbox Series X\|S / Xbox One, and Win32 desktop applications for Windows 11 / Windows 10.
 
-This code is designed to build with Visual Studio 2017 ([15.9](https://walbourn.github.io/vs-2017-15-9-update/)), Visual Studio 2019, Visual Studio 2022, or clang for Windows v11 or later. Use of the Windows 10 May 2020 Update SDK ([19041](https://walbourn.github.io/windows-10-may-2020-update-sdk/)) or later is required.
+This code is designed to build with Visual Studio 2019 (16.11), Visual Studio 2022, or clang for Windows v11 or later. Use of the Windows 10 May 2020 Update SDK ([19041](https://walbourn.github.io/windows-10-may-2020-update-sdk/)) or later is required.
 
 These components are designed to work without requiring any content from the legacy DirectX SDK. For details, see [Where is the DirectX SDK?](https://aka.ms/dxsdk).
 
@@ -28,7 +28,7 @@ These components are designed to work without requiring any content from the leg
     * DirectXHelpers.h - misc C++ helpers for D3D programming
     * EffectPipelineStateDescription.h - helper for creating PSOs
     * Effects.h - set of built-in shaders for common rendering tasks
-    * GamePad.h - gamepad controller helper using XInput
+    * GamePad.h - gamepad controller helper using Windows.Gaming.Input or GameInput
     * GeometricPrimitive.h - draws basic shapes such as cubes and spheres
     * GraphicsMemory.h - helper for managing dynamic graphics memory allocation
     * Keyboard.h - keyboard state tracking helper
@@ -80,6 +80,8 @@ For the latest version of DirectXTK12, bug reports, etc. please visit the projec
 
 ## Release Notes
 
+* As of the September 2022 release, the library makes use of C++11 inline namespaces for differing types that have the same names in the DirectX 11 and DirectX 12 version of the *DirectX Tool Kit*. This provides a link-unique name such as ``DirectX::DX12::SpriteBatch`` that will appear in linker output messages. In most use cases, however, there is no need to add explicit ``DX12`` namespace resolution in client code.
+
 * As of the March 2022 release, legacy Xbox One XDK support requires the XDK April 2018 release or later. Upgrading to the Microsoft GDKX is strongly recommended.
 
 * In the June 2021 release or later, the VS 2019 projects of this library build the HLSL shaders with Shader Model 6 via DXC. Since the NuGet still builds using VS 2017, the build-in shaders in that version are currently Shader Model 5.1. See [this wiki page](https://github.com/microsoft/DirectXTK12/wiki/Shader-Model-6) for more information. The Microsoft GDK projects always use Shader Model 6.
@@ -90,7 +92,9 @@ For the latest version of DirectXTK12, bug reports, etc. please visit the projec
 
   * Use the enum type instead of ``DWORD`` if building up flags values locally with bitmask operations. For example, ```WIC_LOADER_FLAGS flags = WIC_LOADER_DEFAULT; if (...) flags |= WIC_LOADER_FORCE_SRGB;```
 
-* The UWP projects and the Win10 classic desktop project include configurations for the ARM64 platform. These require VS 2017 (15.9 update) or later to build, with the ARM64 toolset installed.
+* The UWP projects and the Win10 classic desktop project include configurations for the ARM64 platform. Building these requires installing the ARM64 toolset.
+
+* When using clang/LLVM for the ARM64 platform, the Windows 11 SDK ([22000](https://walbourn.github.io/windows-sdk-for-windows-11/)) is required.
 
 * The ``CompileShaders.cmd`` script must have Windows-style (CRLF) line-endings. If it is changed to Linux-style (LF) line-endings, it can fail to build all the required shaders.
 
@@ -114,7 +118,7 @@ This project may contain trademarks or logos for projects, products, or services
 
 ## Credits
 
-The _DirectX Tool Kit for DirectX 11_ is the work of Shawn Hargreaves and Chuck Walbourn, with contributions from Aaron Rodriguez Hernandez, and Dani Roman.
+The _DirectX Tool Kit for DirectX 11_ is the work of Shawn Hargreaves and Chuck Walbourn, with contributions from Aaron Rodriguez Hernandez and Dani Roman.
 
 The _DirectX Tool Kit for DirectX 12_ is the work of Pete Lewis, Justin Saunders, and Chuck Walbourn based heavily on the DirectX Tool Kit for DirectX 11.
 

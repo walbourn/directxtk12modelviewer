@@ -154,14 +154,17 @@ namespace
 //--------------------------------------------------------------------------------------
 namespace DirectX
 {
-    namespace Internal
+    inline namespace DX12
     {
-        IWICImagingFactory2* GetWIC() noexcept;
-        // Also used by ScreenGrab
+        namespace Internal
+        {
+            IWICImagingFactory2* GetWIC() noexcept;
+            // Also used by ScreenGrab
+        }
     }
 }
 
-IWICImagingFactory2* DirectX::Internal::GetWIC() noexcept
+IWICImagingFactory2* DirectX::DX12::Internal::GetWIC() noexcept
 {
     static INIT_ONCE s_initOnce = INIT_ONCE_STATIC_INIT;
 
@@ -178,7 +181,7 @@ IWICImagingFactory2* DirectX::Internal::GetWIC() noexcept
     return factory;
 }
 
-using namespace Internal;
+using namespace DirectX::DX12::Internal;
 
 namespace
 {
@@ -552,27 +555,23 @@ namespace
     //--------------------------------------------------------------------------------------
     void SetDebugTextureInfo(
         _In_z_ const wchar_t* fileName,
-        _In_ ID3D12Resource** texture) noexcept
+        _In_ ID3D12Resource* texture) noexcept
     {
-#if !defined(NO_D3D12_DEBUG_NAME) && ( defined(_DEBUG) || defined(PROFILE) )
-        if (texture && *texture)
+    #if !defined(NO_D3D12_DEBUG_NAME) && ( defined(_DEBUG) || defined(PROFILE) )
+        const wchar_t* pstrName = wcsrchr(fileName, '\\');
+        if (!pstrName)
         {
-            const wchar_t* pstrName = wcsrchr(fileName, '\\');
-            if (!pstrName)
-            {
-                pstrName = fileName;
-            }
-            else
-            {
-                pstrName++;
-            }
-
-            (*texture)->SetName(pstrName);
+            pstrName = fileName;
         }
-#else
+        else
+        {
+            pstrName++;
+        }
+        texture->SetName(pstrName);
+    #else
         UNREFERENCED_PARAMETER(fileName);
         UNREFERENCED_PARAMETER(texture);
-#endif
+    #endif
     }
 
     //--------------------------------------------------------------------------------------
@@ -890,7 +889,7 @@ HRESULT DirectX::LoadWICTextureFromFileEx(
 
     if (SUCCEEDED(hr))
     {
-        SetDebugTextureInfo(fileName, texture);
+        SetDebugTextureInfo(fileName, *texture);
     }
 
     return hr;
@@ -951,7 +950,7 @@ HRESULT DirectX::CreateWICTextureFromFileEx(
 
     if (SUCCEEDED(hr))
     {
-        SetDebugTextureInfo(fileName, texture);
+        SetDebugTextureInfo(fileName, *texture);
 
         resourceUpload.Upload(
             *texture,

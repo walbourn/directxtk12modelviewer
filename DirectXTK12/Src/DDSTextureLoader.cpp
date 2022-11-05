@@ -47,11 +47,11 @@ namespace
         case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
         case DXGI_FORMAT_D16_UNORM:
 
-#if (defined(_XBOX_ONE) && defined(_TITLE)) || defined(_GAMING_XBOX)
+        #if (defined(_XBOX_ONE) && defined(_TITLE)) || defined(_GAMING_XBOX)
         case DXGI_FORMAT_D16_UNORM_S8_UINT:
         case DXGI_FORMAT_R16_UNORM_X8_TYPELESS:
         case DXGI_FORMAT_X16_TYPELESS_G8_UINT:
-#endif
+        #endif
             return true;
 
         default:
@@ -72,11 +72,11 @@ namespace
         case DXGI_FORMAT_P010:
         case DXGI_FORMAT_P016:
 
-#if (defined(_XBOX_ONE) && defined(_TITLE)) || defined(_GAMING_XBOX)
+        #if (defined(_XBOX_ONE) && defined(_TITLE)) || defined(_GAMING_XBOX)
         case DXGI_FORMAT_D16_UNORM_S8_UINT:
         case DXGI_FORMAT_R16_UNORM_X8_TYPELESS:
         case DXGI_FORMAT_X16_TYPELESS_G8_UINT:
-#endif
+        #endif
             if (!slicePlane)
             {
                 // Plane 0
@@ -238,6 +238,10 @@ namespace
         if (loadFlags & DDS_LOADER_FORCE_SRGB)
         {
             format = MakeSRGB(format);
+        }
+        else if (loadFlags & DDS_LOADER_IGNORE_SRGB)
+        {
+            format = MakeLinear(format);
         }
 
         D3D12_RESOURCE_DESC desc = {};
@@ -552,27 +556,23 @@ namespace
     //--------------------------------------------------------------------------------------
     void SetDebugTextureInfo(
         _In_z_ const wchar_t* fileName,
-        _In_ ID3D12Resource** texture) noexcept
+        _In_ ID3D12Resource* texture) noexcept
     {
-#if !defined(NO_D3D12_DEBUG_NAME) && ( defined(_DEBUG) || defined(PROFILE) )
-        if (texture && *texture)
+    #if !defined(NO_D3D12_DEBUG_NAME) && ( defined(_DEBUG) || defined(PROFILE) )
+        const wchar_t* pstrName = wcsrchr(fileName, '\\');
+        if (!pstrName)
         {
-            const wchar_t* pstrName = wcsrchr(fileName, '\\');
-            if (!pstrName)
-            {
-                pstrName = fileName;
-            }
-            else
-            {
-                pstrName++;
-            }
-
-            (*texture)->SetName(pstrName);
+            pstrName = fileName;
         }
-#else
+        else
+        {
+            pstrName++;
+        }
+        texture->SetName(pstrName);
+    #else
         UNREFERENCED_PARAMETER(fileName);
         UNREFERENCED_PARAMETER(texture);
-#endif
+    #endif
     }
 
     //--------------------------------------------------------------------------------------
@@ -669,10 +669,7 @@ HRESULT DirectX::LoadDDSTextureFromMemoryEx(
         texture, subresources, isCubeMap);
     if (SUCCEEDED(hr))
     {
-        if (texture && *texture)
-        {
-            SetDebugObjectName(*texture, L"DDSTextureLoader");
-        }
+        SetDebugObjectName(*texture, L"DDSTextureLoader");
 
         if (alphaMode)
             *alphaMode = GetAlphaMode(header);
@@ -760,7 +757,7 @@ HRESULT DirectX::LoadDDSTextureFromFileEx(
 
     if (SUCCEEDED(hr))
     {
-        SetDebugTextureInfo(fileName, texture);
+        SetDebugTextureInfo(fileName, *texture);
 
         if (alphaMode)
             *alphaMode = GetAlphaMode(header);
@@ -861,10 +858,7 @@ HRESULT DirectX::CreateDDSTextureFromMemoryEx(
 
     if (SUCCEEDED(hr))
     {
-        if (texture && *texture)
-        {
-            SetDebugObjectName(*texture, L"DDSTextureLoader");
-        }
+        SetDebugObjectName(*texture, L"DDSTextureLoader");
 
         if (alphaMode)
             *alphaMode = GetAlphaMode(header);
@@ -881,7 +875,14 @@ HRESULT DirectX::CreateDDSTextureFromMemoryEx(
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         // If it's missing mips, let's generate them
-        if ((loadFlags & DDS_LOADER_MIP_AUTOGEN) && subresources.size() != (*texture)->GetDesc().MipLevels)
+    #if defined(_MSC_VER) || !defined(_WIN32)
+        const size_t mipLevels = (*texture)->GetDesc().MipLevels;
+    #else
+        D3D12_RESOURCE_DESC tmpDesc;
+        const size_t mipLevels = (*texture)->GetDesc(&tmpDesc)->MipLevels;
+    #endif
+
+        if ((loadFlags & DDS_LOADER_MIP_AUTOGEN) && subresources.size() != mipLevels)
         {
             resourceUpload.GenerateMips(*texture);
         }
@@ -979,7 +980,7 @@ HRESULT DirectX::CreateDDSTextureFromFileEx(
 
     if (SUCCEEDED(hr))
     {
-        SetDebugTextureInfo(fileName, texture);
+        SetDebugTextureInfo(fileName, *texture);
 
         if (alphaMode)
             *alphaMode = GetAlphaMode(header);
@@ -996,7 +997,14 @@ HRESULT DirectX::CreateDDSTextureFromFileEx(
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         // If it's missing mips, let's generate them
-        if ((loadFlags & DDS_LOADER_MIP_AUTOGEN) && subresources.size() != (*texture)->GetDesc().MipLevels)
+    #if defined(_MSC_VER) || !defined(_WIN32)
+        const size_t mipLevels = (*texture)->GetDesc().MipLevels;
+    #else
+        D3D12_RESOURCE_DESC tmpDesc;
+        const size_t mipLevels = (*texture)->GetDesc(&tmpDesc)->MipLevels;
+    #endif
+
+        if ((loadFlags & DDS_LOADER_MIP_AUTOGEN) && subresources.size() != mipLevels)
         {
             resourceUpload.GenerateMips(*texture);
         }
