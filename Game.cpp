@@ -46,6 +46,7 @@ Game::Game() noexcept(false) :
     m_usingGamepad(false),
     m_wireframe(false),
     m_ccw(true),
+    m_lighting(true),
     m_reloadModel(false),
     m_lhcoords(true),
     m_fpscamera(false),
@@ -61,7 +62,10 @@ Game::Game() noexcept(false) :
 
     if (s_render4k)
     {
-        flags |= DX::DeviceResources::c_Enable4K_UHD | DX::DeviceResources::c_EnableQHD;
+        flags |= DX::DeviceResources::c_Enable4K_UHD;
+#ifndef _TITLE
+        flags |= DX::DeviceResources::c_EnableQHD;
+#endif
     }
 
     m_deviceResources = std::make_unique<DX::DeviceResources>(DXGI_FORMAT_R10G10B10A2_UNORM, DXGI_FORMAT_D32_FLOAT, 2,
@@ -123,6 +127,10 @@ void Game::Initialize(HWND window, int width, int height)
 // Executes the basic game loop.
 void Game::Tick()
 {
+#ifdef _GAMING_XBOX
+    m_deviceResources->WaitForOrigin();
+#endif
+
     m_timer.Tick([&]()
     {
         Update(m_timer);
@@ -285,13 +293,15 @@ void Game::Update(DX::StepTimer const& timer)
 
             if (m_gamepadButtonTracker.b == GamePad::ButtonStateTracker::PRESSED)
             {
-                int value = ((int)m_ccw << 1) | ((int)m_wireframe);
+                int value = ((int)m_wireframe << 2) | ((int)!m_ccw << 1) | ((int)!m_lighting);
 
                 value = value + 1;
-                if (value >= 3) value = 0;
+                if (value > 5) value = 0;
+                // Don't care about wireframe+ccw; only wireframe+lighting
 
-                m_wireframe = (value & 0x1) != 0;
-                m_ccw = (value & 0x2) != 0;
+                m_lighting = (value & 0x1) == 0;
+                m_ccw = (value & 0x2) == 0;
+                m_wireframe = (value & 0x4) != 0;
             }
 
             if (m_gamepadButtonTracker.x == GamePad::ButtonStateTracker::PRESSED)
@@ -433,6 +443,9 @@ void Game::Update(DX::StepTimer const& timer)
 
         if (m_keyboardTracker.pressed.B && !m_wireframe)
             m_ccw = !m_ccw;
+
+        if (m_keyboardTracker.pressed.L)
+            m_lighting = !m_lighting;
 
         if (m_keyboardTracker.pressed.H)
             m_showHud = !m_showHud;
@@ -666,6 +679,32 @@ void Game::Render()
                         pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
                     }
                 }
+
+                // "Unlit" may contain PBR or Skinning so set them anyhow
+                for (auto& it : m_unlitWireframe)
+                {
+                    auto pbr = dynamic_cast<PBREffect*>(it.get());
+                    if (pbr)
+                    {
+                        pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
+                    }
+                }
+                for (auto& it : m_unlitCounterClockwise)
+                {
+                    auto pbr = dynamic_cast<PBREffect*>(it.get());
+                    if (pbr)
+                    {
+                        pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
+                    }
+                }
+                for (auto& it : m_unlitClockwise)
+                {
+                    auto pbr = dynamic_cast<PBREffect*>(it.get());
+                    if (pbr)
+                    {
+                        pbr->SetIBLTextures(radianceTex, diffuseDesc.MipLevels, irradianceTex, m_states->AnisotropicClamp());
+                    }
+                }
             }
 
             if (!m_model->bones.empty())
@@ -685,37 +724,75 @@ void Game::Render()
             Model::EffectCollection::const_iterator eit;
             if (m_wireframe)
             {
-                Model::UpdateEffectMatrices(m_modelWireframe, m_world, m_view, m_proj);
-                if (m_skinning && !m_boneMode)
+                if (m_lighting)
                 {
-                    for (auto& it : m_modelWireframe)
+                    Model::UpdateEffectMatrices(m_modelWireframe, m_world, m_view, m_proj);
+                    if (m_skinning && !m_boneMode)
                     {
-                        auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
-                        if (skinning)
+                        for (auto& it : m_modelWireframe)
                         {
-                            skinning->ResetBoneTransforms();
+                            auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                            if (skinning)
+                            {
+                                skinning->ResetBoneTransforms();
+                            }
                         }
                     }
+                    eit = m_modelWireframe.cbegin();
                 }
-                eit = m_modelWireframe.cbegin();
+                else
+                {
+                    Model::UpdateEffectMatrices(m_unlitWireframe, m_world, m_view, m_proj);
+                    if (m_skinning && !m_boneMode)
+                    {
+                        for (auto& it : m_unlitWireframe)
+                        {
+                            auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                            if (skinning)
+                            {
+                                skinning->ResetBoneTransforms();
+                            }
+                        }
+                    }
+                    eit = m_unlitWireframe.cbegin();
+                }
             }
             else if (m_ccw)
             {
-                Model::UpdateEffectMatrices(m_modelCounterClockwise, m_world, m_view, m_proj);
-                if (m_skinning && !m_boneMode)
+                if (m_lighting)
                 {
-                    for (auto& it : m_modelCounterClockwise)
+                    Model::UpdateEffectMatrices(m_modelCounterClockwise, m_world, m_view, m_proj);
+                    if (m_skinning && !m_boneMode)
                     {
-                        auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
-                        if (skinning)
+                        for (auto& it : m_modelCounterClockwise)
                         {
-                            skinning->ResetBoneTransforms();
+                            auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                            if (skinning)
+                            {
+                                skinning->ResetBoneTransforms();
+                            }
                         }
                     }
+                    eit = m_modelCounterClockwise.cbegin();
                 }
-                eit = m_modelCounterClockwise.cbegin();
+                else
+                {
+                    Model::UpdateEffectMatrices(m_unlitCounterClockwise, m_world, m_view, m_proj);
+                    if (m_skinning && !m_boneMode)
+                    {
+                        for (auto& it : m_unlitCounterClockwise)
+                        {
+                            auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                            if (skinning)
+                            {
+                                skinning->ResetBoneTransforms();
+                            }
+                        }
+                    }
+                    eit = m_unlitCounterClockwise.cbegin();
+                }
             }
-            else
+            else if (m_lighting)
             {
                 Model::UpdateEffectMatrices(m_modelClockwise, m_world, m_view, m_proj);
                 if (m_skinning && !m_boneMode)
@@ -730,6 +807,22 @@ void Game::Render()
                     }
                 }
                 eit = m_modelClockwise.cbegin();
+            }
+            else
+            {
+                Model::UpdateEffectMatrices(m_unlitClockwise, m_world, m_view, m_proj);
+                if (m_skinning && !m_boneMode)
+                {
+                    for (auto& it : m_unlitClockwise)
+                    {
+                        auto skinning = dynamic_cast<IEffectSkinning*>(it.get());
+                        if (skinning)
+                        {
+                            skinning->ResetBoneTransforms();
+                        }
+                    }
+                }
+                eit = m_unlitClockwise.cbegin();
             }
 
             if (m_boneMode)
@@ -805,7 +898,8 @@ void Game::Render()
                 }
 
                 wchar_t szState[128] = {};
-                swprintf_s(szState, L"%-20ls    Tone-mapping operator: %-12ls    %ls", mode, toneMap, viewMode);
+                swprintf_s(szState, L"%-20ls    Tone-mapping operator: %-12ls    %ls    %ls", mode, toneMap, viewMode,
+                    m_lighting ? L"" : L"Lighting Off");
 
                 wchar_t szMode[64] = {};
                 swprintf_s(szMode, L" %ls (Sensitivity: %8.4f)", (m_fpscamera) ? L"  FPS" : L"Orbit", m_sensitivity);
@@ -922,16 +1016,15 @@ void Game::OnActivated()
     m_gamepadButtonTracker.Reset();
 }
 
-void Game::OnDeactivated()
-{
-}
-
 void Game::OnSuspending()
 {
+    m_deviceResources->Suspend();
 }
 
 void Game::OnResuming()
 {
+    m_deviceResources->Resume();
+
     m_timer.ResetElapsedTime();
     m_keyboardTracker.Reset();
     m_mouseButtonTracker.Reset();
@@ -1166,6 +1259,9 @@ void Game::OnDeviceLost()
     m_modelClockwise.clear();
     m_modelCounterClockwise.clear();
     m_modelWireframe.clear();
+    m_unlitClockwise.clear();
+    m_unlitCounterClockwise.clear();
+    m_unlitWireframe.clear();
     m_bones.reset();
 
     m_lineEffect.reset();
@@ -1205,6 +1301,9 @@ void Game::LoadModel()
     m_modelClockwise.clear();
     m_modelCounterClockwise.clear();
     m_modelWireframe.clear();
+    m_unlitClockwise.clear();
+    m_unlitCounterClockwise.clear();
+    m_unlitWireframe.clear();
     m_modelResources.reset();
     m_model.reset();
     m_fxFactory.reset();
@@ -1341,7 +1440,8 @@ void Game::LoadModel()
 
         if (m_model)
         {
-            IEffectFactory *fxFactory = nullptr;
+            IEffectFactory* fxFactory = nullptr;
+            EffectFactory* classicFactory = nullptr;
             if (issdkmesh2)
             {
                 m_pbrFXFactory = std::make_unique<PBREffectFactory>(m_modelResources->Heap(), m_states->Heap());
@@ -1350,6 +1450,7 @@ void Game::LoadModel()
             else
             {
                 m_fxFactory = std::make_unique<EffectFactory>(m_modelResources->Heap(), m_states->Heap());
+                classicFactory = reinterpret_cast<EffectFactory*>(m_fxFactory.get());
                 fxFactory = m_fxFactory.get();
             }
 
@@ -1368,17 +1469,26 @@ void Game::LoadModel()
                 effect->EnableDefaultLighting();
                 m_modelClockwise.push_back(effect);
 
+                effect = std::make_shared<BasicEffect>(device, EffectFlags::None, pd);
+                m_unlitClockwise.push_back(effect);
+
                 pd.rasterizerDesc = CommonStates::CullCounterClockwise;
 
                 effect = std::make_shared<BasicEffect>(device, EffectFlags::Lighting, pd);
                 effect->EnableDefaultLighting();
                 m_modelCounterClockwise.push_back(effect);
 
+                effect = std::make_shared<BasicEffect>(device, EffectFlags::None, pd);
+                m_unlitCounterClockwise.push_back(effect);
+
                 pd.rasterizerDesc = CommonStates::Wireframe;
 
                 effect = std::make_shared<BasicEffect>(device, EffectFlags::Lighting, pd);
                 effect->EnableDefaultLighting();
                 m_modelWireframe.push_back(effect);
+
+                effect = std::make_shared<BasicEffect>(device, EffectFlags::None, pd);
+                m_unlitWireframe.push_back(effect);
             }
             else
             {
@@ -1398,14 +1508,30 @@ void Game::LoadModel()
 
                 m_modelClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
+                if (classicFactory)
+                    classicFactory->EnableLighting(false);
+                m_unlitClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
+
                 pd.rasterizerDesc = pdAlpha.rasterizerDesc = CommonStates::CullCounterClockwise;
 
+                if (classicFactory)
+                    classicFactory->EnableLighting(true);
                 m_modelCounterClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
+
+                if (classicFactory)
+                    classicFactory->EnableLighting(false);
+                m_unlitCounterClockwise = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
 
                 pd.rasterizerDesc = CommonStates::Wireframe;
                 pdAlpha.rasterizerDesc = CommonStates::Wireframe;
                 
+                if (classicFactory)
+                    classicFactory->EnableLighting(true);
                 m_modelWireframe = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
+
+                if (classicFactory)
+                    classicFactory->EnableLighting(false);
+                m_unlitWireframe = m_model->CreateEffects(*fxFactory, pd, pdAlpha, txtOffset);
             }
 
             // Compute mesh stats

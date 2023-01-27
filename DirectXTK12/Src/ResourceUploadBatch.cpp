@@ -8,25 +8,30 @@
 //--------------------------------------------------------------------------------------
 
 #include "pch.h"
-#include "DirectXHelpers.h"
-#include "PlatformHelpers.h"
 #include "ResourceUploadBatch.h"
+
+#include "DirectXHelpers.h"
 #include "LoaderHelpers.h"
+#include "PlatformHelpers.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+
+#ifdef __MINGW32__
+const GUID IID_ID3D12Device = { 0x189819f1, 0x1db6, 0x4b57, { 0xbe, 0x54, 0x18, 0x21, 0x33, 0x9b, 0x85, 0xf7 } };
+#endif
 
 // Include the precompiled shader code.
 namespace
 {
 #ifdef _GAMING_XBOX_SCARLETT
-    #include "XboxGamingScarlettGenerateMips_main.inc"
+#include "XboxGamingScarlettGenerateMips_main.inc"
 #elif defined(_GAMING_XBOX)
-    #include "XboxGamingXboxOneGenerateMips_main.inc"
+#include "XboxGamingXboxOneGenerateMips_main.inc"
 #elif defined(_XBOX_ONE) && defined(_TITLE)
-    #include "XboxOneGenerateMips_main.inc"
+#include "XboxOneGenerateMips_main.inc"
 #else
-    #include "GenerateMips_main.inc"
+#include "GenerateMips_main.inc"
 #endif
 
     bool FormatIsUAVCompatible(_In_ ID3D12Device* device, bool typedUAVLoadAdditionalFormats, DXGI_FORMAT format) noexcept
@@ -204,13 +209,13 @@ namespace
             RootParameterCount
         };
 
-#pragma pack(push, 4)
+    #pragma pack(push, 4)
         struct ConstantData
         {
             XMFLOAT2 InvOutTexelSize;
             uint32_t SrcMipIndex;
         };
-#pragma pack(pop)
+    #pragma pack(pop)
 
         static constexpr uint32_t Num32BitConstants = static_cast<uint32_t>(sizeof(ConstantData) / sizeof(uint32_t));
         static constexpr uint32_t ThreadGroupSize = 8;
@@ -229,7 +234,7 @@ namespace
         static ComPtr<ID3D12RootSignature> CreateGenMipsRootSignature(
             _In_ ID3D12Device* device)
         {
-            constexpr D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+            ENUM_FLAGS_CONSTEXPR D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
                 D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
                 | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
                 | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
@@ -369,12 +374,12 @@ public:
 
         // Submit resource copy to command list
         UpdateSubresources(mList.Get(), resource, scratchResource.Get(), 0, subresourceIndexStart, numSubresources,
-#if defined(_XBOX_ONE) && defined(_TITLE)
-            // Workaround for header constness issue
+        #if defined(_XBOX_ONE) && defined(_TITLE)
+                    // Workaround for header constness issue
             const_cast<D3D12_SUBRESOURCE_DATA*>(subRes)
-#else
+        #else
             subRes
-#endif
+        #endif
         );
 
         // Remember this upload object for delayed release
@@ -413,7 +418,12 @@ public:
             throw std::runtime_error("GenerateMips cannot operate on a copy queue");
         }
 
+    #if defined(_MSC_VER) || !defined(_WIN32)
         const auto desc = resource->GetDesc();
+    #else
+        D3D12_RESOURCE_DESC tmpDesc;
+        const auto& desc = *resource->GetDesc(&tmpDesc);
+    #endif
 
         if (desc.MipLevels == 1)
         {
@@ -458,12 +468,12 @@ public:
         }
         else if (FormatIsBGR(desc.Format))
         {
-#if !defined(_GAMING_XBOX) && !(defined(_XBOX_ONE) && defined(_TITLE))
+        #if !defined(_GAMING_XBOX) && !(defined(_XBOX_ONE) && defined(_TITLE))
             if (!mStandardSwizzle64KBSupported)
             {
                 throw std::runtime_error("GenerateMips needs StandardSwizzle64KBSupported device support for BGR");
             }
-#endif
+        #endif
 
             GenerateMips_TexturePathBGR(resource);
         }
@@ -554,28 +564,28 @@ public:
         // Kick off a thread that waits for the upload to complete on the GPU timeline.
         // Let the thread run autonomously, but provide a future the user can wait on.
         std::future<void> future = std::async(std::launch::async, [uploadBatch]()
-        {
-            // Wait on the GPU-complete notification
-            const DWORD wr = WaitForSingleObject(uploadBatch->GpuCompleteEvent.get(), INFINITE);
-            if (wr != WAIT_OBJECT_0)
             {
-                if (wr == WAIT_FAILED)
+                // Wait on the GPU-complete notification
+                const DWORD wr = WaitForSingleObject(uploadBatch->GpuCompleteEvent.get(), INFINITE);
+                if (wr != WAIT_OBJECT_0)
                 {
-                    throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "WaitForSingleObject");
+                    if (wr == WAIT_FAILED)
+                    {
+                        throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "WaitForSingleObject");
+                    }
+                    else
+                    {
+                        throw std::runtime_error("WaitForSingleObject");
+                    }
                 }
-                else
-                {
-                    throw std::runtime_error("WaitForSingleObject");
-                }
-            }
 
-            // Delete the batch
-            // Because the vectors contain smart-pointers, their destructors will
-            // fire and the resources will be released.
-            delete uploadBatch;
-        });
+                // Delete the batch
+                // Because the vectors contain smart-pointers, their destructors will
+                // fire and the resources will be released.
+                delete uploadBatch;
+            });
 
-        // Reset our state
+            // Reset our state
         mCommandType = D3D12_COMMAND_LIST_TYPE_DIRECT;
         mInBeginEndBlock = false;
         mList.Reset();
@@ -598,13 +608,13 @@ public:
 
         if (FormatIsBGR(format))
         {
-#if defined(_GAMING_XBOX) || (defined(_XBOX_ONE) && defined(_TITLE))
-            // We know the RGB and BGR memory layouts match for Xbox One
+        #if defined(_GAMING_XBOX) || (defined(_XBOX_ONE) && defined(_TITLE))
+                    // We know the RGB and BGR memory layouts match for Xbox One
             return true;
-#else
-            // BGR path requires DXGI_FORMAT_R8G8B8A8_UNORM support for UAV load/store plus matching layouts
+        #else
+                    // BGR path requires DXGI_FORMAT_R8G8B8A8_UNORM support for UAV load/store plus matching layouts
             return mTypedUAVLoadAdditionalFormats && mStandardSwizzle64KBSupported;
-#endif
+        #endif
         }
 
         if (FormatIsSRGB(format))
@@ -621,7 +631,12 @@ private:
     void GenerateMips_UnorderedAccessPath(
         _In_ ID3D12Resource* resource)
     {
+    #if defined(_MSC_VER) || !defined(_WIN32)
         const auto desc = resource->GetDesc();
+    #else
+        D3D12_RESOURCE_DESC tmpDesc;
+        const auto& desc = *resource->GetDesc(&tmpDesc);
+    #endif
         assert(!FormatIsBGR(desc.Format) && !FormatIsSRGB(desc.Format));
 
         const CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -678,7 +693,12 @@ private:
         auto const descriptorSize = static_cast<int>(mDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 
         // Create the top-level SRV
+    #if defined(_MSC_VER) || !defined(_WIN32)
         CD3DX12_CPU_DESCRIPTOR_HANDLE handleIt(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    #else
+        CD3DX12_CPU_DESCRIPTOR_HANDLE handleIt;
+        std::ignore = descriptorHeap->GetCPUDescriptorHandleForHeapStart(&handleIt);
+    #endif
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
         srvDesc.Format = desc.Format;
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -729,12 +749,17 @@ private:
         mList->SetComputeRootSignature(mGenMipsResources->rootSignature.Get());
         mList->SetPipelineState(pso.Get());
         mList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
-        mList->SetComputeRootDescriptorTable(GenerateMipsResources::SourceTexture, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+    #if defined(_MSC_VER) || !defined(_WIN32)
+        D3D12_GPU_DESCRIPTOR_HANDLE handle(descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    #else
+        D3D12_GPU_DESCRIPTOR_HANDLE handle;
+        std::ignore = descriptorHeap->GetGPUDescriptorHandleForHeapStart(&handle);
+    #endif
+        mList->SetComputeRootDescriptorTable(GenerateMipsResources::SourceTexture, handle);
 
         // Get the descriptor handle -- uavH will increment over each loop
-        CD3DX12_GPU_DESCRIPTOR_HANDLE uavH(
-            descriptorHeap->GetGPUDescriptorHandleForHeapStart(),
-            descriptorSize); // offset by 1 descriptor
+        CD3DX12_GPU_DESCRIPTOR_HANDLE uavH(handle, descriptorSize); // offset by 1 descriptor
 
         // Process each mip
         auto mipWidth = static_cast<uint32_t>(desc.Width);
@@ -818,7 +843,12 @@ private:
     void GenerateMips_TexturePath(
         _In_ ID3D12Resource* resource)
     {
+    #if defined(_MSC_VER) || !defined(_WIN32)
         const auto resourceDesc = resource->GetDesc();
+    #else
+        D3D12_RESOURCE_DESC tmpDesc;
+        const auto& resourceDesc = *resource->GetDesc(&tmpDesc);
+    #endif
         assert(!FormatIsBGR(resourceDesc.Format) || FormatIsSRGB(resourceDesc.Format));
 
         auto copyDesc = resourceDesc;
@@ -883,19 +913,29 @@ private:
     void GenerateMips_TexturePathBGR(
         _In_ ID3D12Resource* resource)
     {
+    #if defined(_MSC_VER) || !defined(_WIN32)
         const auto resourceDesc = resource->GetDesc();
+    #else
+        D3D12_RESOURCE_DESC tmpDesc;
+        const auto& resourceDesc = *resource->GetDesc(&tmpDesc);
+    #endif
         assert(FormatIsBGR(resourceDesc.Format));
 
         // Create a resource with the same description with RGB and with UAV flags
         auto copyDesc = resourceDesc;
         copyDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         copyDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-#if !defined(_GAMING_XBOX) && !(defined(_XBOX_ONE) && defined(_TITLE))
+    #if !defined(_GAMING_XBOX) && !(defined(_XBOX_ONE) && defined(_TITLE))
         copyDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_STANDARD_SWIZZLE;
-#endif
+    #endif
 
         D3D12_HEAP_DESC heapDesc = {};
+    #if defined(_MSC_VER) || !defined(_WIN32)
         auto const allocInfo = mDevice->GetResourceAllocationInfo(0, 1, &copyDesc);
+    #else
+        D3D12_RESOURCE_ALLOCATION_INFO allocInfo;
+        std::ignore = mDevice->GetResourceAllocationInfo(&allocInfo, 0, 1, &copyDesc);
+    #endif
         heapDesc.SizeInBytes = allocInfo.SizeInBytes;
         heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
         heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;

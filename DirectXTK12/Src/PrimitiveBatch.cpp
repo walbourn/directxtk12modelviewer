@@ -14,7 +14,7 @@
 #include "GraphicsMemory.h"
 
 using namespace DirectX;
-using namespace DirectX::Internal;
+using namespace DirectX::DX12::Private;
 using Microsoft::WRL::ComPtr;
 
 
@@ -120,15 +120,15 @@ static bool CanBatchPrimitives(D3D_PRIMITIVE_TOPOLOGY topology) noexcept
 {
     switch (topology)
     {
-        case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-        case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
-        case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
-            // Lists can easily be merged.
-            return true;
+    case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
+    case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
+    case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
+        // Lists can easily be merged.
+        return true;
 
-        default:
-            // Strips cannot.
-            return false;
+    default:
+        // Strips cannot.
+        return false;
     }
 
     // We could also merge indexed strips by inserting degenerates,

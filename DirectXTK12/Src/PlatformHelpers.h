@@ -16,12 +16,21 @@
 #include <memory>
 
 #ifndef MAKEFOURCC
-    #define MAKEFOURCC(ch0, ch1, ch2, ch3) \
+#define MAKEFOURCC(ch0, ch1, ch2, ch3) \
                 (static_cast<uint32_t>(static_cast<uint8_t>(ch0)) \
                 | (static_cast<uint32_t>(static_cast<uint8_t>(ch1)) << 8) \
                 | (static_cast<uint32_t>(static_cast<uint8_t>(ch2)) << 16) \
                 | (static_cast<uint32_t>(static_cast<uint8_t>(ch3)) << 24))
 #endif /* defined(MAKEFOURCC) */
+
+// See https://walbourn.github.io/modern-c++-bitmask-types/
+#ifndef ENUM_FLAGS_CONSTEXPR
+#if defined(NTDDI_WIN10_RS1) && !defined(__MINGW32__)
+#define ENUM_FLAGS_CONSTEXPR constexpr
+#else
+#define ENUM_FLAGS_CONSTEXPR const
+#endif
+#endif
 
 namespace DirectX
 {

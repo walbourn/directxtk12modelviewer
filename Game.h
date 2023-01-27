@@ -63,7 +63,7 @@ public:
 
     // Messages
     void OnActivated();
-    void OnDeactivated();
+    void OnDeactivated() {}
     void OnSuspending();
     void OnResuming();
     void OnFileOpen(const wchar_t* filename);
@@ -138,6 +138,9 @@ private:
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelClockwise;
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelCounterClockwise;
     std::vector<std::shared_ptr<DirectX::IEffect>>  m_modelWireframe;
+    std::vector<std::shared_ptr<DirectX::IEffect>>  m_unlitWireframe;
+    std::vector<std::shared_ptr<DirectX::IEffect>>  m_unlitClockwise;
+    std::vector<std::shared_ptr<DirectX::IEffect>>  m_unlitCounterClockwise;
     DirectX::ModelBone::TransformArray              m_bones;
 
     std::unique_ptr<DirectX::SpriteBatch>           m_spriteBatch;
@@ -208,6 +211,7 @@ private:
     bool                                            m_usingGamepad;
     bool                                            m_wireframe;
     bool                                            m_ccw;
+    bool                                            m_lighting;
     bool                                            m_reloadModel;
     bool                                            m_lhcoords;
     bool                                            m_fpscamera;

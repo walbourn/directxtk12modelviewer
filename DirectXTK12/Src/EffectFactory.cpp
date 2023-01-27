@@ -63,6 +63,7 @@ public:
         , mSamplerDescriptors(nullptr)
         , mSharing(true)
         , mUseNormalMapEffect(true)
+        , mEnableLighting(true)
         , mEnablePerPixelLighting(true)
         , mEnableFog(false)
         , mEnableInstancing(false)
@@ -89,6 +90,7 @@ public:
 
     bool mSharing;
     bool mUseNormalMapEffect;
+    bool mEnableLighting;
     bool mEnablePerPixelLighting;
     bool mEnableFog;
     bool mEnableInstancing;
@@ -336,7 +338,7 @@ std::shared_ptr<IEffect> EffectFactory::Impl::CreateEffect(
     else if (info.enableNormalMaps && mUseNormalMapEffect)
     {
         // NormalMapEffect
-        int effectflags = EffectFlags::None;
+        int effectflags = EffectFlags::PerPixelLighting;
 
         if (mEnableFog)
         {
@@ -408,7 +410,12 @@ std::shared_ptr<IEffect> EffectFactory::Impl::CreateEffect(
     else
     {
         // set effect flags for creation
-        int effectflags = (mEnablePerPixelLighting) ? EffectFlags::PerPixelLighting : EffectFlags::Lighting;
+        int effectflags = EffectFlags::None;
+
+        if (mEnableLighting)
+        {
+            effectflags = (mEnablePerPixelLighting) ? EffectFlags::PerPixelLighting : EffectFlags::Lighting;
+        }
 
         if (mEnableFog)
         {
@@ -497,11 +504,20 @@ EffectFactory::EffectFactory(_In_ ID3D12DescriptorHeap* textureDescriptors, _In_
         throw std::invalid_argument("Descriptor heap cannot be null if no device is provided. Use the alternative EffectFactory constructor instead.");
     }
 
-    if (textureDescriptors->GetDesc().Type != D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+#if defined(_MSC_VER) || !defined(_WIN32)
+    const D3D12_DESCRIPTOR_HEAP_TYPE textureHeapType = textureDescriptors->GetDesc().Type;
+    const D3D12_DESCRIPTOR_HEAP_TYPE samplerHeapType = samplerDescriptors->GetDesc().Type;
+#else
+    D3D12_DESCRIPTOR_HEAP_DESC tmpDesc1, tmpDesc2;
+    const D3D12_DESCRIPTOR_HEAP_TYPE textureHeapType = textureDescriptors->GetDesc(&tmpDesc1)->Type;
+    const D3D12_DESCRIPTOR_HEAP_TYPE samplerHeapType = samplerDescriptors->GetDesc(&tmpDesc2)->Type;
+#endif
+
+    if (textureHeapType != D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
     {
         throw std::invalid_argument("EffectFactory::CreateEffect requires a CBV_SRV_UAV descriptor heap for textureDescriptors.");
     }
-    if (samplerDescriptors->GetDesc().Type != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+    if (samplerHeapType != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
     {
         throw std::invalid_argument("EffectFactory::CreateEffect requires a SAMPLER descriptor heap for samplerDescriptors.");
     }
@@ -545,6 +561,11 @@ void EffectFactory::ReleaseCache()
 void EffectFactory::SetSharing(bool enabled) noexcept
 {
     pImpl->mSharing = enabled;
+}
+
+void EffectFactory::EnableLighting(bool enabled) noexcept
+{
+    pImpl->mEnableLighting = enabled;
 }
 
 void EffectFactory::EnablePerPixelLighting(bool enabled) noexcept
