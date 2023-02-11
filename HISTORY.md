@@ -4,6 +4,9 @@ Release available for download on [GitHub](https://github.com/walbourn/directxtk
 
 ## Release History
 
+### February 11, 2023
+* Updated for February 2023 release of DirectX Tool Kit
+
 ### November 5, 2022
 * Updated for October 2022 release of DirectX Tool Kit
 * Added lighting vs. unlit toggle
