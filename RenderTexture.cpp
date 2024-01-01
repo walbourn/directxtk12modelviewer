@@ -21,6 +21,12 @@ using namespace DX;
 
 using Microsoft::WRL::ComPtr;
 
+#ifdef __MINGW32__
+#define DX_CONSTEXPR const
+#else
+#define DX_CONSTEXPR constexpr
+#endif
+
 RenderTexture::RenderTexture(DXGI_FORMAT format) noexcept :
     m_state(D3D12_RESOURCE_STATE_COMMON),
     m_srvDescriptor{},
@@ -53,7 +59,7 @@ void RenderTexture::SetDevice(_In_ ID3D12Device* device,
             throw std::runtime_error("CheckFeatureSupport");
         }
 
-        const UINT required = D3D12_FORMAT_SUPPORT1_TEXTURE2D | D3D12_FORMAT_SUPPORT1_RENDER_TARGET;
+        DX_CONSTEXPR UINT required = D3D12_FORMAT_SUPPORT1_TEXTURE2D | D3D12_FORMAT_SUPPORT1_RENDER_TARGET;
         if ((formatSupport.Support1 & required) != required)
         {
 #ifdef _DEBUG

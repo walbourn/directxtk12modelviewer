@@ -19,7 +19,7 @@
 #include <winapifamily.h>
 
 #if defined(_XBOX_ONE) && defined(_TITLE)
-#include <xdk.h>
+#error Support for Xbox One has been retired.
 #else
 
 #include <winsdkver.h>
