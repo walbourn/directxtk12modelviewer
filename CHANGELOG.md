@@ -4,8 +4,9 @@ Release available for download on [GitHub](https://github.com/walbourn/directxtk
 
 ## Release History
 
-### June 4, 2024
+### June 5, 2024
 * Updated for June 2024 release of DirectX Tool Kit
+* Retired x86 support; added ARM64 configuration
 
 ### December 31, 2023
 * Updated for December 2023 release of DirectX Tool Kit
