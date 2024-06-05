@@ -41,6 +41,10 @@ namespace
     {
         const GUID&         wic;
         DXGI_FORMAT         format;
+
+        constexpr WICTranslate(const GUID& wg, DXGI_FORMAT fmt) noexcept :
+            wic(wg),
+            format(fmt) {}
     };
 
     constexpr WICTranslate g_WICFormats[] =
@@ -78,6 +82,10 @@ namespace
     {
         const GUID& source;
         const GUID& target;
+
+        constexpr WICConvert(const GUID& src, const GUID& tgt) noexcept :
+            source(src),
+            target(tgt) {}
     };
 
     constexpr WICConvert g_WICConvert[] =
@@ -156,7 +164,7 @@ namespace DirectX
 {
     inline namespace DX12
     {
-        namespace Internal
+        namespace ToolKitInternal
         {
             IWICImagingFactory2* GetWIC() noexcept;
             // Also used by ScreenGrab
@@ -164,7 +172,7 @@ namespace DirectX
     }
 }
 
-IWICImagingFactory2* DirectX::DX12::Internal::GetWIC() noexcept
+IWICImagingFactory2* DirectX::DX12::ToolKitInternal::GetWIC() noexcept
 {
     static INIT_ONCE s_initOnce = INIT_ONCE_STATIC_INIT;
 
@@ -181,7 +189,7 @@ IWICImagingFactory2* DirectX::DX12::Internal::GetWIC() noexcept
     return factory;
 }
 
-using namespace DirectX::DX12::Internal;
+using namespace DirectX::DX12::ToolKitInternal;
 
 namespace
 {
