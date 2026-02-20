@@ -11,6 +11,9 @@
     <Filter Include="Utilities">
       <UniqueIdentifier>{36cfa85b-f9cc-499f-92e5-62b05184fa30}</UniqueIdentifier>
     </Filter>
+    <Filter Include="vcpkg">
+      <UniqueIdentifier>{826311b3-4037-4d76-b29e-057878f2cc80}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -99,6 +102,12 @@
     </None>
     <None Include="comic4k.spritefont">
       <Filter>Assets</Filter>
+    </None>
+    <None Include="vcpkg-configuration.json">
+      <Filter>vcpkg</Filter>
+    </None>
+    <None Include="vcpkg.json">
+      <Filter>vcpkg</Filter>
     </None>
   </ItemGroup>
 </Project>
