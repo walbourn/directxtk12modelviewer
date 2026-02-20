@@ -4,6 +4,11 @@ Release available for download on [GitHub](https://github.com/walbourn/directxtk
 
 ## Release History
 
+### February 2026
+* Converted to use vcpkg manifest mode to get *DirectX Tool Kit*
+  * Currently set to October 2025
+* Retired VS 2019, added VS 2022 project
+
 ### June 5, 2024
 * Updated for June 2024 release of DirectX Tool Kit
 * Retired x86 support; added ARM64 configuration
