@@ -42,7 +42,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: >
           msbuild /m /p:Configuration=Debug /p:Platform=x64
-          DirectXTKModelViewer_Desktop_2022.sln
+          DirectXTKModelViewer_Desktop_2022_Win10.sln
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
