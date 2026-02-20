@@ -53,7 +53,11 @@
 #include <d3d12_x.h>
 #include <d3dx12_x.h>
 #else
-#include <d3d12.h>
+#include <directx/dxgiformat.h>
+#include <directx/d3d12.h>
+#include <directx/d3dx12.h>
+#include <dxguids/dxguids.h>
+
 #include <dxgi1_6.h>
 
 #ifdef _DEBUG
@@ -120,20 +124,21 @@ namespace DX
     }
 }
 
-#include <CommonStates.h>
-#include <DDSTextureLoader.h>
-#include <DescriptorHeap.h>
-#include <DirectXHelpers.h>
-#include <Effects.h>
-#include <GamePad.h>
-#include <GraphicsMemory.h>
-#include <Keyboard.h>
-#include <Model.h>
-#include <Mouse.h>
-#include <PostProcess.h>
-#include <PrimitiveBatch.h>
-#include <ResourceUploadBatch.h>
-#include <SimpleMath.h>
-#include <SpriteBatch.h>
-#include <SpriteFont.h>
-#include <VertexTypes.h>
+#define DIRECTX_TOOLKIT_IMPORT
+#include <directxtk12/CommonStates.h>
+#include <directxtk12/DDSTextureLoader.h>
+#include <directxtk12/DescriptorHeap.h>
+#include <directxtk12/DirectXHelpers.h>
+#include <directxtk12/Effects.h>
+#include <directxtk12/GamePad.h>
+#include <directxtk12/GraphicsMemory.h>
+#include <directxtk12/Keyboard.h>
+#include <directxtk12/Model.h>
+#include <directxtk12/Mouse.h>
+#include <directxtk12/PostProcess.h>
+#include <directxtk12/PrimitiveBatch.h>
+#include <directxtk12/ResourceUploadBatch.h>
+#include <directxtk12/SimpleMath.h>
+#include <directxtk12/SpriteBatch.h>
+#include <directxtk12/SpriteFont.h>
+#include <directxtk12/VertexTypes.h>
