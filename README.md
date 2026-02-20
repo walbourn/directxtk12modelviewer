@@ -31,9 +31,9 @@ Build and Run (F5)
 
 ### Xbox
 
-Run VS 2019
+Run VS 2022
 
-Open Project/Solution... ``DirectXTKModelViewer_GDK_2019.sln``
+Open Project/Solution... ``DirectXTKModelViewer_GDK_2022.sln``
 
 Ensure ``DirectXTKModelViewer_*`` is the "StartUp Project"
 

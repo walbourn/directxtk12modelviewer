@@ -55,6 +55,9 @@
     <Filter Include="Utilities">
       <UniqueIdentifier>{2cee9b24-ba87-4c3b-a517-a70ae32f631e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="vcpkg">
+      <UniqueIdentifier>{54f2213b-c4f8-4c59-a368-c11b65f5de19}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="comic.spritefont">
@@ -68,6 +71,12 @@
     </None>
     <None Include="consolas4k.spritefont">
       <Filter>Assets</Filter>
+    </None>
+    <None Include="vcpkg-configuration.json">
+      <Filter>vcpkg</Filter>
+    </None>
+    <None Include="vcpkg.json">
+      <Filter>vcpkg</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
