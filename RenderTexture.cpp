@@ -10,7 +10,7 @@
 #include "pch.h"
 #include "RenderTexture.h"
 
-#include "DirectXHelpers.h"
+#include "directxtk12/DirectXHelpers.h"
 
 #include <algorithm>
 #include <cstdio>

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "dependencies": [
+    {
+      "name": "directx-headers",
+      "platform": "windows & !xbox"
+    },
+    {
+      "name": "directx12-agility",
+      "platform": "windows & !xbox"
+    },
+    {
+      "name": "directxtk12",
+      "default-features": false
+    },
+    {
+      "name": "ms-gdkx",
+      "platform": "xbox"
+    }
+  ]
+}
