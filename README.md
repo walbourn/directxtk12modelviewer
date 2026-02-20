@@ -147,9 +147,9 @@ xbcp /x/title <source directory> xd:\
 
 ## Release Notes
 
-FOR SECURITY ADVISORIES, see [GitHub](https://github.com/walbourn/directxtkmodelviewer/security/advisories).
+FOR SECURITY ADVISORIES, see [GitHub](https://github.com/walbourn/directxtk12modelviewer/security/advisories).
 
-For a full change history, see [CHANGELOG.md](https://github.com/walbourn/directxtkmodelviewer/blob/main/CHANGELOG.md).
+For a full change history, see [CHANGELOG.md](https://github.com/walbourn/directxtk12modelviewer/blob/main/CHANGELOG.md).
 
 ## Contributing
 
