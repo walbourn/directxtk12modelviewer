@@ -63,8 +63,6 @@
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
-
-#include "d3dx12.h"
 #endif
 
 #include <DirectXMath.h>
